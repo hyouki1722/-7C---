@@ -750,7 +750,7 @@
                 </div>
             </div>
 
-            <button class="btn-export-global" onclick="CareApp.prepareAndPrint()">🖨️ 匯出列印完整報告 (PDF)</button>
+            <button class="btn-export-global" onclick="CareApp.prepareAndPrint()">𖖛️ 匯出列印完整報告 (PDF)</button>
         </div>
 
         <div class="modal-overlay" id="dailyModal">
@@ -769,9 +769,6 @@
     <script>
         if ('scrollRestoration' in history) {
             history.scrollRestoration = 'manual';
-        }
-        window.onbeforeunload = function () {
-            window.scrollTo(0, 0);
         }
 
         window.CareApp = (function () {
@@ -856,7 +853,7 @@
                 if (!container) return;
 
                 container.style.animation = 'none';
-                container.offsetHeight; 
+                container.offsetHeight;
                 container.style.animation = 'fadeIn 0.5s ease-in-out';
 
                 let r = Math.floor(Math.random() * sloganList.length);
@@ -924,7 +921,6 @@
                 else if (site === '大腸癌') switchOncology('colorectal', true);
             }
 
-            /* --- Fix 1: 重新補足並落實體重快速流失警訊攔截演算法 --- */
             function checkWeightLoss(newWeight, newDateStr) {
                 if (!newWeight || labRecords.length === 0) return;
                 let lastValidRecord = null;
@@ -938,7 +934,7 @@
                 let prevW = parseFloat(lastValidRecord.weight);
                 let currentW = parseFloat(newWeight);
                 if (isNaN(prevW) || isNaN(currentW) || prevW === 0) return;
-                
+
                 let lossPercent = ((prevW - currentW) / prevW) * 100;
                 let daysDiff = (new Date(newDateStr) - new Date(lastValidRecord.recordDate)) / (1000 * 60 * 60 * 24);
                 if (daysDiff <= 0) return;
@@ -960,9 +956,9 @@
                     let v = parseFloat(record[key]);
                     let cfg = CLINICAL_LAB_LIMITS[key];
                     if (cfg.panicMin !== null && v <= cfg.panicMin) {
-                        panicMessages.push(`🚨【臨床危急】${cfg.name}極低：${v} (已達危急值 <=${cfg.panicMin}，請速至急診！`);
+                        panicMessages.push(`🚨【臨床危急】${cfg.name}極低：${v} (已達危急值 <=${cfg.panicMin})`);
                     } else if (cfg.panicMax !== null && v >= cfg.panicMax) {
-                        panicMessages.push(`🚨【臨床危急】${cfg.name}極高：${v} (已達危急值 >=${cfg.panicMax}，請速至急診！`);
+                        panicMessages.push(`🚨【臨床危急】${cfg.name}極高：${v} (已達危急值 >=${cfg.panicMax})`);
                     } else if (cfg.min !== null && v < cfg.min) {
                         alertMessages.push(`⚠️ ${cfg.name}偏低：${v} (正常值: ${cfg.min}~${cfg.max || '無'})`);
                     } else if (cfg.max !== null && v > cfg.max) {
@@ -996,9 +992,8 @@
 
                 const typeSelect = document.getElementById('id-type');
                 if (typeSelect && currentSection === 'report') {
-                    let oldVal = typeSelect.value;
+                    // 若切換癌別，清空原先可能不適用的細胞型態選擇
                     typeSelect.innerHTML = `<option value="">請選擇...</option>` + getCellTypeOptions();
-                    typeSelect.value = oldVal;
                 }
 
                 if (!fromIDCard && currentSection === 'report') {
@@ -1010,7 +1005,6 @@
                         document.getElementById('site-other-container').style.display = 'none';
                     }
                 }
-                /* Fix 3: 連動切換時同步重新繪製治療欄位，防止 Placeholder 沒同步更新 */
                 if (currentSection === 'tx') { renderTxSection(); }
             }
 
@@ -1039,7 +1033,6 @@
                 const isStandardMeta = ['骨骼', '腦部', '肝臟', '肺部', '腹膜', ''].includes(idCardState.metaSiteRaw || '');
                 const isLocked = !!idCardState.lockedOncology;
 
-                /* Fix 2: 將 HTML Option 預填結構無縫嵌入，解決回填失效問題 */
                 content.innerHTML = `
                     <div class="info-panel">
                         <div class="info-title">🪪 我的癌症身分證</div>
@@ -1080,7 +1073,7 @@
                         </div>
 
                         <div class="form-row"><label>淋巴轉移</label>
-                            <select class="form-select" id="id-lymph" onchange="document.getElementById('lymph-detail-container').style.display = (this.value === '有') ? 'block' : 'none';"><option value="無">無</option><option value="有">有</option></select>
+                            <select class="form-select" id="id-lymph" onchange="document.getElementById('lymph-detail-container').style.display = (this.value === '有') ? 'block' : 'none';"><option value="無">無</option><option value="眼">有</option></select>
                             <div id="lymph-detail-container" class="conditional-div">
                                 <div class="grid-2">
                                     <div><label>取出(顆)</label><input type="number" id="id-lymph-total" class="form-input" min="0"></div>
@@ -1089,7 +1082,7 @@
                             </div>
                         </div>
                         <div class="form-row"><label>遠處轉移</label>
-                            <select class="form-select" id="id-meta" onchange="document.getElementById('meta-detail-container').style.display = (this.value === '有') ? 'block' : 'none';"><option value="無">無</option><option value="有">有</option></select>
+                            <select class="form-select" id="id-meta" onchange="document.getElementById('meta-detail-container').style.display = (this.value === '有') ? 'block' : 'none';"><option value="無">無</option><option value="眼">有</option></select>
                             <div id="meta-detail-container" class="conditional-div">
                                 <label>部位</label>
                                 <select class="form-select" id="id-meta-site" onchange="document.getElementById('meta-site-other-container').style.display = (this.value === '其他') ? 'block' : 'none';">
@@ -1133,7 +1126,7 @@
                 if (!validateDateGuard('id-date')) return;
 
                 let siteVal = document.getElementById('id-site').value;
-                if (siteVal === '開他' || siteVal === '其他') {
+                if (siteVal === '其他') {
                     let otherInput = document.getElementById('id-site-other').value;
                     if (checkEmpty(otherInput)) return alert("⚠️ 【遺漏填寫】請填寫您的「其他」癌症部位！");
                     siteVal = otherInput;
@@ -1142,7 +1135,7 @@
                 if (checkEmpty(document.getElementById('id-type').value)) return alert("⚠️ 【遺漏填寫】請選擇「癌細胞型態」！");
                 if (checkEmpty(document.getElementById('id-size').value)) return alert("⚠️ 【遺漏填寫】請填寫「腫瘤大小」！");
                 if (checkEmpty(document.getElementById('id-stage').value)) return alert("⚠️ 【遺漏填寫】請選擇「期別」！");
-                if (checkEmpty(document.getElementById('id-grade').value)) return alert("⚠️ 【遺漏填寫】請選擇「細胞分化程度</label>」！");
+                if (checkEmpty(document.getElementById('id-grade').value)) return alert("⚠️ 【遺漏填寫】請選擇「細胞分化程度」！");
                 if (checkEmpty(document.getElementById('id-ki67').value)) return alert("⚠️ 【遺漏填寫】請選擇「Ki 67 指數」！");
 
                 let lymphStr = document.getElementById('id-lymph').value;
@@ -1211,9 +1204,9 @@
                             <div class="history-data">
                                 類型: <b>${r.displayType}</b><br>
                                 ${r.typeKey === 'surgery' ? `名稱: ${r.surgName || '-'} | 部位: ${r.surgSite || '-'}` :
-                                r.typeKey === 'rt' ? `部位: ${r.rtSite || '-'} | 進度: ${r.rtProgress || '-'}` :
-                                r.typeKey === 'other' ? `名稱: ${r.otherName || '-'}` :
-                                    `共 ${r.chemoTimes || 0} 次, 每 ${r.chemoFreq || 0} 週 | 下次: ${r.nextDate || '無'}`}<br>
+                        r.typeKey === 'rt' ? `部位: ${r.rtSite || '-'} | 進度: ${r.rtProgress || '-'}` :
+                            r.typeKey === 'other' ? `名稱: ${r.otherName || '-'}` :
+                                `共 ${r.chemoTimes || 0} 次, 每 ${r.chemoFreq || 0} 週 | 下次: ${r.nextDate || '無'}`}<br>
                                 備註/副作用: ${r.notes || '無'}
                             </div></div>
                         `).join('')}
@@ -1470,7 +1463,7 @@
                 if (!validateDateGuard('exam-date')) return;
 
                 let examTypeVal = document.getElementById('exam-type').value;
-                if (examTypeVal === '開他' || examTypeVal === '其他') {
+                if (examTypeVal === '其他') {
                     let otherInput = document.getElementById('exam-type-other').value;
                     if (checkEmpty(otherInput)) return alert("⚠️ 【遺漏填寫】請輸入您的「其他」檢查項目名稱！");
                     examTypeVal = otherInput;
@@ -1506,7 +1499,7 @@
                         <div class="form-row"><label>症狀選擇</label>
                             <select class="form-select" id="se-symp" onchange="document.getElementById('se-other-container').style.display = (this.value === '其他') ? 'block' : 'none';">
                                 <option value="噁心 / 嘔吐">噁心 / 嘔吐</option><option value="腹瀉">腹瀉</option><option value="便秘">便秘</option><option value="皮疹">皮疹</option><option value="發燒">發燒</option>
-                                <option value="疲憊">疲憊</option><option value="掉髮">掉髮</option><option value="手足麻木 / 刺痛">手足麻木 / 刺痛</option><option value="開他">其他 (請自行輸入)</option>
+                                <option value="疲憊">疲憊</option><option value="掉髮">掉髮</option><option value="手足麻木 / 刺痛">手足麻木 / 刺痛</option><option value="其他">其他 (請自行輸入)</option>
                             </select>
                             <div id="se-other-container" class="conditional-div"><input type="text" id="se-symp-other" class="form-input" placeholder="請輸入您的其他症狀..."></div>
                         </div>
@@ -1521,13 +1514,12 @@
 
                 let sev = document.getElementById('se-sev').value;
                 if (sev === '嚴重 (需就醫)') {
-                    /* Fix 5: 補正專線資訊，防止占位符暴露 */
                     let confirmed = confirm("🚨【危急提醒】您選擇了「嚴重(需就醫)」。\n\n請問是否點選錯誤？\n若確實發生嚴重副作用，請立即停止填寫並前往急診，或撥打台東馬偕諮詢專線：(089)310-150分機213或轉急診。\n\n按「確定」繼續儲存，按「取消」重新選擇。");
-                    if (!confirmed) return; 
+                    if (!confirmed) return;
                 }
 
                 let sympVal = document.getElementById('se-symp').value;
-                if (sympVal === '開他' || sympVal === '其他') {
+                if (sympVal === '其他') {
                     let otherInput = document.getElementById('se-symp-other').value;
                     if (checkEmpty(otherInput)) return alert("⚠️ 【遺漏填寫】請輸入您的「其他」副作用症狀！");
                     sympVal = otherInput;
@@ -1654,7 +1646,6 @@
                             change = lossPercent.toFixed(1) + ' %';
 
                             let daysDiff = (new Date(r.recordDate) - new Date(prevDate)) / (1000 * 60 * 60 * 24);
-                            /* Fix 4: 防呆 daysDiff > 0 防止同日多次填寫自比導致邏輯錯亂 */
                             if (daysDiff > 0 && ((daysDiff <= 7 && lossPercent >= 2.0) || (daysDiff <= 30 && lossPercent >= 5.0) || (lossPercent >= 5.0))) {
                                 advice = '<br><span style="color:#dc2626; font-weight:bold;">(建議與營養師討論)</span>';
                             }
@@ -1747,7 +1738,7 @@
 
                 html += `<div class="print-section"><div class="print-section-title">🤢 副作用紀錄</div>`;
                 if (seRecords.length > 0) {
-                    html += `<table class="print-table"><tr><th>發生日期</th><th>症網路</th><th>嚴重程度</th><th>備註說明</th></tr>`;
+                    html += `<table class="print-table"><tr><th>發生日期</th><th>症狀</th><th>嚴重程度</th><th>備註說明</th></tr>`;
                     const sortedSe = [...seRecords].sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate));
                     sortedSe.forEach(r => html += `<tr><td>${r.recordDate}</td><td>${r.symp}</td><td>${r.sev}</td><td>${r.notes || '-'}</td></tr>`);
                     html += `</table>`;
