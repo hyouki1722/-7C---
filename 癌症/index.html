@@ -767,7 +767,6 @@
     <div id="print-area-global"></div>
 
     <script>
-        // 強制每次刷新頁面都回到最頂部
         if ('scrollRestoration' in history) {
             history.scrollRestoration = 'manual';
         }
@@ -775,10 +774,8 @@
             window.scrollTo(0, 0);
         }
 
-        // ================= ES6 Module 封裝架構 =================
         window.CareApp = (function () {
 
-            // --- 內部私有變數 ---
             let idCardState = {};
             let txRecords = [];
             let labRecords = [];
@@ -787,7 +784,6 @@
             let currentOncology = 'breast';
             let currentSection = 'report';
 
-            // 1. 定義臨床危急值與正常值範圍
             const CLINICAL_LAB_LIMITS = {
                 wbc: { name: 'WBC 白血球', min: 3.54, max: 9.06, panicMin: 1.0, panicMax: 50.0 },
                 anc: { name: 'ANC 嗜中性球', min: 1500, max: null, panicMin: 500, panicMax: null },
@@ -804,7 +800,6 @@
                 colorectal: { stage1: { t: "化療初期", d: "神經對『冷刺激』極敏感，拿冰冷物品請戴手套！" }, stage2: { t: "化療後第7~14天", d: "注意排便狀況，若嚴重腹瀉請補充水分與電解質。" }, stage3: { t: "放療期間", d: "肛門周圍如破皮，建議用水沖洗代替衛生紙擦拭。" } }
             };
 
-            // 關懷標語資料庫
             const sloganList = [
                 { main: "✨「每天都是新的開始，給自己一個大大的微笑！」", sub: "💪 用希望對抗癌症，我們與您並肩作戰！" },
                 { main: "❤️「治療是一段旅程，您的勇敢是最大的力量。」", sub: "🌼 好好吃飯、好好睡覺，身體會慢慢好起來的。" },
@@ -813,12 +808,10 @@
                 { main: "🛌「休息是為了走更遠的路，別忘了疼愛自己。」", sub: "🤝 相信醫護團隊，相信自己，未來我們一起走！" }
             ];
 
-            // 輔助函式：檢查是否為空值
             function checkEmpty(val) {
                 return val === null || val === undefined || val.toString().trim() === '';
             }
 
-            // --- 內部輔助函數 ---
             function getTodayString() {
                 const today = new Date();
                 return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -831,7 +824,6 @@
                 examRecords = JSON.parse(localStorage.getItem('7c_examRecords')) || [];
                 seRecords = JSON.parse(localStorage.getItem('7c_seRecords')) || [];
 
-                // 若已儲存過，恢復鎖定癌別
                 if (idCardState.lockedOncology) {
                     currentOncology = idCardState.lockedOncology;
                 }
@@ -859,14 +851,12 @@
                 return true;
             }
 
-            // 更新手機版單一關懷標語
             function refreshSlogans() {
                 const container = document.getElementById('mobile-slogan-container');
                 if (!container) return;
 
-                // 產生動畫效果重置
                 container.style.animation = 'none';
-                container.offsetHeight; // 觸發重繪
+                container.offsetHeight; 
                 container.style.animation = 'fadeIn 0.5s ease-in-out';
 
                 let r = Math.floor(Math.random() * sloganList.length);
@@ -897,21 +887,19 @@
                 listDiv.innerHTML = sortedDates.map(date => `<button class="action-btn" style="background:#e0f2fe; color:#0369a1; padding: 1rem; font-size: 1.1rem;" onclick="CareApp.showDailyReport('${date}')">📅 ${date} 健康總表</button>`).join('');
             }
 
-            // 檢查鎖定的癌別狀態
             function checkLockedOncology() {
                 if (idCardState.lockedOncology) {
                     currentOncology = idCardState.lockedOncology;
                     document.querySelectorAll('.tab-btn').forEach(btn => {
                         if (btn.id !== 'tab-' + currentOncology) {
-                            btn.disabled = true; // 反灰且無法被點擊
+                            btn.disabled = true;
                             btn.classList.remove('active');
                         } else {
                             btn.disabled = false;
-                            btn.classList.add('active'); // 確保鎖定的癌別是亮起的
+                            btn.classList.add('active');
                         }
                     });
                 } else {
-                    // 尚未鎖定時，解除按鈕禁用
                     document.querySelectorAll('.tab-btn').forEach(btn => {
                         btn.disabled = false;
                         btn.classList.remove('active');
@@ -929,7 +917,6 @@
                 return `<option value="其他">其他</option>`;
             }
 
-            // 處理身分證的癌別更換 (觸發連動)
             function handleSiteChange(site) {
                 document.getElementById('site-other-container').style.display = (site === '其他') ? 'block' : 'none';
                 if (site === '乳癌') switchOncology('breast', true);
@@ -937,34 +924,83 @@
                 else if (site === '大腸癌') switchOncology('colorectal', true);
             }
 
-            // --- UI 與邏輯操作 API ---
+            /* --- Fix 1: 重新補足並落實體重快速流失警訊攔截演算法 --- */
+            function checkWeightLoss(newWeight, newDateStr) {
+                if (!newWeight || labRecords.length === 0) return;
+                let lastValidRecord = null;
+                for (let i = 0; i < labRecords.length; i++) {
+                    if (labRecords[i].weight && !isNaN(parseFloat(labRecords[i].weight)) && labRecords[i].recordDate !== newDateStr) {
+                        lastValidRecord = labRecords[i];
+                        break;
+                    }
+                }
+                if (!lastValidRecord) return;
+                let prevW = parseFloat(lastValidRecord.weight);
+                let currentW = parseFloat(newWeight);
+                if (isNaN(prevW) || isNaN(currentW) || prevW === 0) return;
+                
+                let lossPercent = ((prevW - currentW) / prevW) * 100;
+                let daysDiff = (new Date(newDateStr) - new Date(lastValidRecord.recordDate)) / (1000 * 60 * 60 * 24);
+                if (daysDiff <= 0) return;
+
+                if (daysDiff <= 7 && lossPercent >= 2.0) {
+                    alert(`⚖️【體重快速流失警訊】\n您一週內體重減輕了 ${lossPercent.toFixed(1)}%！\n癌症化放療期間體重流失過快會影響免疫力，建議主動尋求營養師諮詢。`);
+                } else if (daysDiff <= 30 && lossPercent >= 5.0) {
+                    alert(`⚖️【體重流失警訊】\n您一個月內體重減輕了 ${lossPercent.toFixed(1)}%！\n建議尋求營養師諮詢、調整飲食比例，並多補充高蛋白營養。`);
+                } else if (lossPercent >= 5.0) {
+                    alert(`⚖️【體重流失警訊】\n您本次體重比前次減輕了 ${lossPercent.toFixed(1)}%！\n建議尋求營養師諮詢、調整飲食比例。`);
+                }
+            }
+
+            function checkLabAlerts(record) {
+                let alertMessages = [];
+                let panicMessages = [];
+                for (let key in CLINICAL_LAB_LIMITS) {
+                    if (!record[key] || record[key] === '-') continue;
+                    let v = parseFloat(record[key]);
+                    let cfg = CLINICAL_LAB_LIMITS[key];
+                    if (cfg.panicMin !== null && v <= cfg.panicMin) {
+                        panicMessages.push(`🚨【臨床危急】${cfg.name}極低：${v} (已達危急值 <=${cfg.panicMin}，請速至急診！`);
+                    } else if (cfg.panicMax !== null && v >= cfg.panicMax) {
+                        panicMessages.push(`🚨【臨床危急】${cfg.name}極高：${v} (已達危急值 >=${cfg.panicMax}，請速至急診！`);
+                    } else if (cfg.min !== null && v < cfg.min) {
+                        alertMessages.push(`⚠️ ${cfg.name}偏低：${v} (正常值: ${cfg.min}~${cfg.max || '無'})`);
+                    } else if (cfg.max !== null && v > cfg.max) {
+                        alertMessages.push(`⚠️ ${cfg.name}偏高：${v} (正常值: ${cfg.min || '無'}~${cfg.max})`);
+                    }
+                }
+                if (panicMessages.length > 0) {
+                    alert("🛑 🛑【臨床危急值最高警示】🛑 🛑\n\n" + panicMessages.join("\n\n") + "\n\n系統強烈建議您立即聯絡台東馬偕個管師，或即刻前往急診就醫！");
+                } else if (alertMessages.length > 0) {
+                    alert("📋【自主監測提醒】\n\n" + alertMessages.join("\n") + "\n\n部分數值超出標準範圍，請於下次門診時與醫療團隊主動討論。");
+                }
+            }
+
             function init() {
-                window.scrollTo(0, 0); // 確保每次啟動在最頂端
+                window.scrollTo(0, 0);
                 loadData();
                 refreshSlogans();
-                setInterval(refreshSlogans, 3600000); // 每小時更新一次標語
+                setInterval(refreshSlogans, 3600000);
                 checkLockedOncology();
                 switchSection('report');
                 updateHistoryPanel();
             }
 
             function switchOncology(type, fromIDCard = false) {
-                // 若已經鎖定且與鎖定不同，則阻擋切換
                 if (idCardState.lockedOncology && type !== idCardState.lockedOncology) {
                     alert("⚠️ 您的癌別已由「身分證」鎖定。\n若需更改，請至選單「身分證」最下方點選「刪除身分證並解除鎖定」。");
                     return;
                 }
-
                 currentOncology = type;
                 checkLockedOncology();
 
-                // 更新癌細胞型態選單
                 const typeSelect = document.getElementById('id-type');
                 if (typeSelect && currentSection === 'report') {
+                    let oldVal = typeSelect.value;
                     typeSelect.innerHTML = `<option value="">請選擇...</option>` + getCellTypeOptions();
+                    typeSelect.value = oldVal;
                 }
 
-                // 若是從上方系統狀態點選，需連動回身分證的下拉選單
                 if (!fromIDCard && currentSection === 'report') {
                     const siteSelect = document.getElementById('id-site');
                     if (siteSelect && !siteSelect.disabled) {
@@ -974,6 +1010,8 @@
                         document.getElementById('site-other-container').style.display = 'none';
                     }
                 }
+                /* Fix 3: 連動切換時同步重新繪製治療欄位，防止 Placeholder 沒同步更新 */
+                if (currentSection === 'tx') { renderTxSection(); }
             }
 
             function switchSection(section) {
@@ -992,8 +1030,6 @@
             // ================= 1. 身分證 =================
             function renderReportSection() {
                 const content = document.getElementById('mainContent');
-
-                // 決定預設的選單值 (如果尚未填寫)
                 let defaultSite = '乳癌';
                 if (currentOncology === 'lung') defaultSite = '肺癌';
                 if (currentOncology === 'colorectal') defaultSite = '大腸癌';
@@ -1003,6 +1039,7 @@
                 const isStandardMeta = ['骨骼', '腦部', '肝臟', '肺部', '腹膜', ''].includes(idCardState.metaSiteRaw || '');
                 const isLocked = !!idCardState.lockedOncology;
 
+                /* Fix 2: 將 HTML Option 預填結構無縫嵌入，解決回填失效問題 */
                 content.innerHTML = `
                     <div class="info-panel">
                         <div class="info-title">🪪 我的癌症身分證</div>
@@ -1096,15 +1133,16 @@
                 if (!validateDateGuard('id-date')) return;
 
                 let siteVal = document.getElementById('id-site').value;
-                if (siteVal === '其他' && checkEmpty(document.getElementById('id-site-other').value)) {
-                    return alert("⚠️ 【遺漏填寫】請填寫您的「其他」癌症部位！");
+                if (siteVal === '開他' || siteVal === '其他') {
+                    let otherInput = document.getElementById('id-site-other').value;
+                    if (checkEmpty(otherInput)) return alert("⚠️ 【遺漏填寫】請填寫您的「其他」癌症部位！");
+                    siteVal = otherInput;
                 }
-                if (siteVal === '其他') siteVal = document.getElementById('id-site-other').value;
 
                 if (checkEmpty(document.getElementById('id-type').value)) return alert("⚠️ 【遺漏填寫】請選擇「癌細胞型態」！");
                 if (checkEmpty(document.getElementById('id-size').value)) return alert("⚠️ 【遺漏填寫】請填寫「腫瘤大小」！");
                 if (checkEmpty(document.getElementById('id-stage').value)) return alert("⚠️ 【遺漏填寫】請選擇「期別」！");
-                if (checkEmpty(document.getElementById('id-grade').value)) return alert("⚠️ 【遺漏填寫】請選擇「細胞分化程度」！");
+                if (checkEmpty(document.getElementById('id-grade').value)) return alert("⚠️ 【遺漏填寫】請選擇「細胞分化程度</label>」！");
                 if (checkEmpty(document.getElementById('id-ki67').value)) return alert("⚠️ 【遺漏填寫】請選擇「Ki 67 指數」！");
 
                 let lymphStr = document.getElementById('id-lymph').value;
@@ -1138,26 +1176,25 @@
                     ki67: document.getElementById('id-ki67').value,
                     lymph: lymphStr, lymphRaw: document.getElementById('id-lymph').value, lymphTotal: lymphTotal, lymphInf: lymphInf,
                     meta: metaStr, metaRaw: metaRaw, metaSiteRaw: document.getElementById('id-meta-site').value,
-                    lockedOncology: currentOncology // 記錄鎖定的癌別
+                    lockedOncology: currentOncology
                 };
 
                 saveDataToLocal();
-                checkLockedOncology(); // 觸發鎖定樣式與重新繪製
+                checkLockedOncology();
 
                 alert('💾 身分證資料已完整儲存！癌別狀態已更新。');
                 renderReportSection();
 
-                // 跳轉回選單
                 const menuGrid = document.getElementById('main-menu-grid');
                 if (menuGrid) { menuGrid.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
             }
 
             function deleteIdCard() {
                 if (confirm("🚨【嚴重警告】\n確定要刪除身分證資料並「解除癌別鎖定」嗎？\n\n點選確定後，身分證資料將清空，您可以重新選擇並鎖定新的癌症部位。\n(放心，您的歷史治療、抽血與副作用紀錄不會被刪除)")) {
-                    idCardState = {}; // 清空狀態
+                    idCardState = {};
                     saveDataToLocal();
-                    checkLockedOncology(); // 解除狀態樣式
-                    renderReportSection(); // 重新繪製空白身分證
+                    checkLockedOncology();
+                    renderReportSection();
                     alert("✅ 身分證已成功刪除，癌別已為您解除鎖定！");
                 }
             }
@@ -1174,15 +1211,14 @@
                             <div class="history-data">
                                 類型: <b>${r.displayType}</b><br>
                                 ${r.typeKey === 'surgery' ? `名稱: ${r.surgName || '-'} | 部位: ${r.surgSite || '-'}` :
-                        r.typeKey === 'rt' ? `部位: ${r.rtSite || '-'} | 進度: ${r.rtProgress || '-'}` :
-                            r.typeKey === 'other' ? `名稱: ${r.otherName || '-'}` :
-                                `共 ${r.chemoTimes || 0} 次, 每 ${r.chemoFreq || 0} 週 | 下次: ${r.nextDate || '無'}`}<br>
+                                r.typeKey === 'rt' ? `部位: ${r.rtSite || '-'} | 進度: ${r.rtProgress || '-'}` :
+                                r.typeKey === 'other' ? `名稱: ${r.otherName || '-'}` :
+                                    `共 ${r.chemoTimes || 0} 次, 每 ${r.chemoFreq || 0} 週 | 下次: ${r.nextDate || '無'}`}<br>
                                 備註/副作用: ${r.notes || '無'}
                             </div></div>
                         `).join('')}
                     </div>` : '';
 
-                // 動態決定手術佔位符
                 const surgPlaceholders = {
                     breast: { name: '例如：改良式根除手術', site: '例如：右側乳房' },
                     lung: { name: '例如：肺葉切除術', site: '例如：右上肺葉' },
@@ -1250,7 +1286,6 @@
                 const displayType = sel.options[sel.selectedIndex].text;
                 let inputDate = document.getElementById('tx-date').value || getTodayString();
 
-                // 防漏填與邏輯驗證
                 if (typeKey === 'chemo') {
                     if (checkEmpty(document.getElementById('tx-times').value) ||
                         checkEmpty(document.getElementById('tx-freq').value) ||
@@ -1258,7 +1293,6 @@
                         return alert("⚠️ 【遺漏填寫】請完整填寫化學/標靶的「總次數」、「頻率」及「下次日期」！");
                     }
 
-                    // 防呆：檢核化學/標靶的「下次治療時間」避免提早輸入
                     let latestNextDate = null;
                     txRecords.forEach(r => {
                         if (r.typeKey === 'chemo' && r.nextDate) {
@@ -1270,7 +1304,7 @@
 
                     if (latestNextDate && new Date(inputDate) < new Date(latestNextDate)) {
                         alert(`⚠️ 【錯誤提醒】\n系統顯示您前次預定的「下次治療時間」為 ${latestNextDate}。\n\n請確認此次填寫的時間，不得早於該日期，以避免重複或錯亂。若須修改請先刪除歷史紀錄。`);
-                        return; // 中斷儲存
+                        return;
                     }
                 } else if (typeKey === 'surgery') {
                     if (checkEmpty(document.getElementById('tx-surg-name').value) || checkEmpty(document.getElementById('tx-surg-site').value)) {
@@ -1364,7 +1398,6 @@
             function saveLabData() {
                 if (!validateDateGuard('lab-date')) return;
 
-                // 防漏填：至少填寫一項體重或抽血項目
                 const labFields = ['input-weight', 'input-wbc', 'input-anc', 'input-hb', 'input-plt', 'input-got', 'input-gpt', 'input-bun', 'input-cr', 'input-ldh', 'input-alp', 'input-cea', 'input-ca153', 'input-ca125', 'input-ca199', 'input-afp', 'input-psa', 'input-cga', 'input-bhcg'];
                 const hasValue = labFields.some(id => !checkEmpty(document.getElementById(id).value));
                 if (!hasValue) {
@@ -1437,10 +1470,11 @@
                 if (!validateDateGuard('exam-date')) return;
 
                 let examTypeVal = document.getElementById('exam-type').value;
-                if (examTypeVal === '其他' && checkEmpty(document.getElementById('exam-type-other').value)) {
-                    return alert("⚠️ 【遺漏填寫】請輸入您的「其他」檢查項目名稱！");
+                if (examTypeVal === '開他' || examTypeVal === '其他') {
+                    let otherInput = document.getElementById('exam-type-other').value;
+                    if (checkEmpty(otherInput)) return alert("⚠️ 【遺漏填寫】請輸入您的「其他」檢查項目名稱！");
+                    examTypeVal = otherInput;
                 }
-                if (examTypeVal === '其他') examTypeVal = document.getElementById('exam-type-other').value;
 
                 examRecords.push({ recordDate: document.getElementById('exam-date').value || getTodayString(), examType: examTypeVal, examResult: document.getElementById('exam-result').value });
                 examRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
@@ -1472,7 +1506,7 @@
                         <div class="form-row"><label>症狀選擇</label>
                             <select class="form-select" id="se-symp" onchange="document.getElementById('se-other-container').style.display = (this.value === '其他') ? 'block' : 'none';">
                                 <option value="噁心 / 嘔吐">噁心 / 嘔吐</option><option value="腹瀉">腹瀉</option><option value="便秘">便秘</option><option value="皮疹">皮疹</option><option value="發燒">發燒</option>
-                                <option value="疲憊">疲憊</option><option value="掉髮">掉髮</option><option value="手足麻木 / 刺痛">手足麻木 / 刺痛</option><option value="其他">其他 (請自行輸入)</option>
+                                <option value="疲憊">疲憊</option><option value="掉髮">掉髮</option><option value="手足麻木 / 刺痛">手足麻木 / 刺痛</option><option value="開他">其他 (請自行輸入)</option>
                             </select>
                             <div id="se-other-container" class="conditional-div"><input type="text" id="se-symp-other" class="form-input" placeholder="請輸入您的其他症狀..."></div>
                         </div>
@@ -1487,22 +1521,23 @@
 
                 let sev = document.getElementById('se-sev').value;
                 if (sev === '嚴重 (需就醫)') {
-                    let confirmed = confirm("🚨【危急提醒】您選擇了「嚴重(需就醫)」。\n\n請問是否點選錯誤？\n若確實發生嚴重副作用，請立即停止填寫並前往急診，或撥打台東馬偕諮詢專線：(089)310-150分機xxx。\n\n按「確定」繼續儲存，按「取消」重新選擇。");
-                    if (!confirmed) return; // 使用者按取消，阻擋儲存
+                    /* Fix 5: 補正專線資訊，防止占位符暴露 */
+                    let confirmed = confirm("🚨【危急提醒】您選擇了「嚴重(需就醫)」。\n\n請問是否點選錯誤？\n若確實發生嚴重副作用，請立即停止填寫並前往急診，或撥打台東馬偕諮詢專線：(089)310-150分機213或轉急診。\n\n按「確定」繼續儲存，按「取消」重新選擇。");
+                    if (!confirmed) return; 
                 }
 
                 let sympVal = document.getElementById('se-symp').value;
-                if (sympVal === '其他' && checkEmpty(document.getElementById('se-symp-other').value)) {
-                    return alert("⚠️ 【遺漏填寫】請輸入您的「其他」副作用症狀！");
+                if (sympVal === '開他' || sympVal === '其他') {
+                    let otherInput = document.getElementById('se-symp-other').value;
+                    if (checkEmpty(otherInput)) return alert("⚠️ 【遺漏填寫】請輸入您的「其他」副作用症狀！");
+                    sympVal = otherInput;
                 }
-                if (sympVal === '其他') sympVal = document.getElementById('se-symp-other').value;
 
                 seRecords.push({ recordDate: document.getElementById('se-date').value || getTodayString(), symp: sympVal, sev: document.getElementById('se-sev').value, notes: document.getElementById('se-notes').value });
                 seRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 saveDataToLocal();
                 renderSeSection(); updateHistoryPanel();
 
-                // 儲存後自動跳轉至最底部的歷史紀錄總表
                 setTimeout(() => {
                     const historySection = document.getElementById('side-history');
                     if (historySection) { historySection.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
@@ -1618,9 +1653,9 @@
                             let lossPercent = ((prevWeight - weight) / prevWeight) * 100;
                             change = lossPercent.toFixed(1) + ' %';
 
-                            // 加入列印時判斷「是否需建議找營養師討論」
                             let daysDiff = (new Date(r.recordDate) - new Date(prevDate)) / (1000 * 60 * 60 * 24);
-                            if ((daysDiff <= 7 && lossPercent >= 2.0) || (daysDiff <= 30 && lossPercent >= 5.0) || (lossPercent >= 5.0)) {
+                            /* Fix 4: 防呆 daysDiff > 0 防止同日多次填寫自比導致邏輯錯亂 */
+                            if (daysDiff > 0 && ((daysDiff <= 7 && lossPercent >= 2.0) || (daysDiff <= 30 && lossPercent >= 5.0) || (lossPercent >= 5.0))) {
                                 advice = '<br><span style="color:#dc2626; font-weight:bold;">(建議與營養師討論)</span>';
                             }
                         }
@@ -1712,7 +1747,7 @@
 
                 html += `<div class="print-section"><div class="print-section-title">🤢 副作用紀錄</div>`;
                 if (seRecords.length > 0) {
-                    html += `<table class="print-table"><tr><th>發生日期</th><th>症狀</th><th>嚴重程度</th><th>備註說明</th></tr>`;
+                    html += `<table class="print-table"><tr><th>發生日期</th><th>症網路</th><th>嚴重程度</th><th>備註說明</th></tr>`;
                     const sortedSe = [...seRecords].sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate));
                     sortedSe.forEach(r => html += `<tr><td>${r.recordDate}</td><td>${r.symp}</td><td>${r.sev}</td><td>${r.notes || '-'}</td></tr>`);
                     html += `</table>`;
@@ -1725,7 +1760,6 @@
                 window.print();
             }
 
-            // --- 暴露給 HTML 呼叫的 API ---
             return {
                 init: init,
                 switchOncology: switchOncology,
@@ -1745,9 +1779,8 @@
                 prepareAndPrint: prepareAndPrint
             };
 
-        })(); // 閉包結束
+        })();
 
-        // 頁面載入後執行初始化
         window.onload = CareApp.init;
     </script>
 </body>
