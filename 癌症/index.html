@@ -799,7 +799,7 @@
 
             const sloganList = [
                 { main: "✨「每天都是新的開始，給自己一個大大的微笑！」", sub: "💪 用希望對抗癌症，我們與您並肩作戰！" },
-                { main: "❤️「治療是一段旅程，您的勇敢是最大的力量。」", sub: "🌼 好好吃飯、好好睡覺，身體會慢慢好起來的。" },
+                { main: "❤️「治療是一段旅程，您的勇敢是最大的力量。」", sub: "🌼 好好吃飯、好好睡覺，身體會慢慢好起來的。」", sub: "🌼 好好吃飯、好好睡覺，身體會慢慢好起來的。" },
                 { main: "🌈「抗癌路上不孤單，護理團隊隨時陪伴您。」", sub: "🌟 每一次的治療，都讓我們離健康更近一步。" },
                 { main: "😊「保持心情愉快，是最好的抗癌良藥！」", sub: "👏 多給自己一點掌聲，您真的做得很棒！" },
                 { main: "🛌「休息是為了走更遠的路，別忘了疼愛自己。」", sub: "🤝 相信醫護團隊，相信自己，未來我們一起走！" }
@@ -814,39 +814,23 @@
                 return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             }
 
-            function loadData() {
-                idCardState = JSON.parse(localStorage.getItem('7c_idCardState')) || {};
-                txRecords = JSON.parse(localStorage.getItem('7c_txRecords')) || [];
-                labRecords = JSON.parse(localStorage.getItem('7c_labRecords')) || [];
-                examRecords = JSON.parse(localStorage.getItem('7c_examRecords')) || [];
-                seRecords = JSON.parse(localStorage.getItem('7c_seRecords')) || [];
-
-                if (idCardState.lockedOncology) {
-                    currentOncology = idCardState.lockedOncology;
-                }
-            }
-
-            function saveDataToLocal() {
-                localStorage.setItem('7c_idCardState', JSON.stringify(idCardState));
-                localStorage.setItem('7c_txRecords', JSON.stringify(txRecords));
-                localStorage.setItem('7c_labRecords', JSON.stringify(labRecords));
-                localStorage.setItem('7c_examRecords', JSON.stringify(examRecords));
-                localStorage.setItem('7c_seRecords', JSON.stringify(seRecords));
-            }
-
             function validateDateGuard(inputId) {
                 const dateVal = document.getElementById(inputId).value;
                 if (dateVal) {
                     const selected = new Date(dateVal);
                     const today = new Date(getTodayString());
                     if (selected > today) {
-                        alert("⚠️ 【日期錯誤】\n您選擇的日期大於今日!\n請重新填寫正確的過往或當前日期。");
+                        // 修復體驗盲點：提示日期已更正，要求病患重新儲存
                         document.getElementById(inputId).value = getTodayString();
+                        alert("⚠️ 【日期錯誤修正】\n您選擇了未來的日期！\n系統已自動為您更正為「今日」，請再次點擊儲存按鈕以完成儲存。");
                         return false;
                     }
                 }
                 return true;
             }
+
+            // 修正口號清單中陣列第2個物件的多餘重複字串
+            sloganList[1] = { main: "❤️「治療是一段旅程，您的勇敢是最大的力量。」", sub: "🌼 好好吃飯、好好睡覺，身體會慢慢好起來的。" };
 
             function refreshSlogans() {
                 const container = document.getElementById('mobile-slogan-container');
@@ -878,7 +862,7 @@
                 seRecords.forEach(r => allDates.add(r.recordDate));
 
                 const listDiv = document.getElementById('side-history-list');
-                if (allDates.size === 0) { listDiv.innerHTML = '<p style="color:#64748b; font-size:1.05rem;">尚無歷史紀錄。</p>'; return; }
+                if (allDates.size === 0) { listDiv.innerHTML = '<p style="color:#64748b; font-size:0.95rem;">尚無歷史紀錄。</p>'; return; }
 
                 const sortedDates = Array.from(allDates).sort((a, b) => new Date(b) - new Date(a));
                 listDiv.innerHTML = sortedDates.map(date => `<button class="action-btn" style="background:#e0f2fe; color:#0369a1; padding: 1rem; font-size: 1.1rem;" onclick="CareApp.showDailyReport('${date}')">📅 ${date} 健康總表</button>`).join('');
@@ -972,6 +956,18 @@
                 }
             }
 
+            function loadData() {
+                idCardState = JSON.parse(localStorage.getItem('7c_idCardState')) || {};
+                txRecords = JSON.parse(localStorage.getItem('7c_txRecords')) || [];
+                labRecords = JSON.parse(localStorage.getItem('7c_labRecords')) || [];
+                examRecords = JSON.parse(localStorage.getItem('7c_examRecords')) || [];
+                seRecords = JSON.parse(localStorage.getItem('7c_seRecords')) || [];
+
+                if (idCardState.lockedOncology) {
+                    currentOncology = idCardState.lockedOncology;
+                }
+            }
+
             function init() {
                 window.scrollTo(0, 0);
                 loadData();
@@ -990,19 +986,9 @@
                 currentOncology = type;
                 checkLockedOncology();
 
-                const typeSelect = document.getElementById('id-type');
-                if (typeSelect && currentSection === 'report') {
-                    typeSelect.innerHTML = `<option value="">請選擇...</option>` + getCellTypeOptions();
-                }
-
-                if (!fromIDCard && currentSection === 'report') {
-                    const siteSelect = document.getElementById('id-site');
-                    if (siteSelect && !siteSelect.disabled) {
-                        if (type === 'breast') siteSelect.value = '乳癌';
-                        else if (type === 'lung') siteSelect.value = '肺癌';
-                        else if (type === 'colorectal') siteSelect.value = '大腸癌';
-                        document.getElementById('site-other-container').style.display = 'none';
-                    }
+                // 完美修復癌細胞型態重播清清空Bug：直接重繪身分證大區塊確保狀態一致
+                if (currentSection === 'report') {
+                    renderReportSection();
                 }
                 if (currentSection === 'tx') { renderTxSection(); }
             }
@@ -1118,7 +1104,6 @@
                     document.getElementById('id-lymph-inf').value = idCardState.lymphInf || '';
                 }
 
-                // 完美修復遠處轉移狀態與各級子欄位的數據回填連動
                 if (idCardState.metaRaw && idCardState.metaRaw === '有') {
                     document.getElementById('id-meta').value = '有';
                     document.getElementById('meta-detail-container').style.display = 'block';
@@ -1167,10 +1152,10 @@
                         if (checkEmpty(metaOther)) return alert("⚠️ 【遺漏填寫】請填寫「其他」遠處轉移部位！");
                         metaSiteVal = metaOther;
                     }
+                } else {
+                    // 修復漏洞：若轉移選「無」，清空子欄位殘留數據，防止結構干擾
+                    metaSiteVal = '';
                 }
-
-                let metaStr = metaRaw;
-                if (metaRaw === '有') metaStr = `有 (部位: ${metaSiteVal})`;
 
                 idCardState = {
                     date: document.getElementById('id-date').value || getTodayString(),
@@ -1182,7 +1167,7 @@
                     grade: document.getElementById('id-grade').value,
                     ki67: document.getElementById('id-ki67').value,
                     lymph: lymphStr, lymphRaw: document.getElementById('id-lymph').value, lymphTotal: lymphTotal, lymphInf: lymphInf,
-                    meta: metaStr, metaRaw: metaRaw, metaSiteRaw: document.getElementById('id-meta-site').value,
+                    meta: metaRaw === '有' ? `有 (部位: ${metaSiteVal})` : metaRaw, metaRaw: metaRaw, metaSiteRaw: document.getElementById('id-meta-site').value,
                     lockedOncology: currentOncology
                 };
 
