@@ -204,7 +204,7 @@
             background: #f8fafc;
         }
 
-        /* --- 導覽選單 (置頂黏貼) --- */
+        /* --- 導覽選單 --- */
         .menu-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -510,7 +510,7 @@
             font-size: 1rem;
         }
 
-        /* --- 彈出視窗 Modal --- */
+        /* --- Modal --- */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -750,7 +750,7 @@
                 </div>
             </div>
 
-            <button class="btn-export-global" onclick="CareApp.prepareAndPrint()">𖖛️ 匯出列印完整報告 (PDF)</button>
+            <button class="btn-export-global" onclick="CareApp.prepareAndPrint()">🖨️ 匯出列印完整報告 (PDF)</button>
         </div>
 
         <div class="modal-overlay" id="dailyModal">
@@ -992,7 +992,6 @@
 
                 const typeSelect = document.getElementById('id-type');
                 if (typeSelect && currentSection === 'report') {
-                    // 若切換癌別，清空原先可能不適用的細胞型態選擇
                     typeSelect.innerHTML = `<option value="">請選擇...</option>` + getCellTypeOptions();
                 }
 
@@ -1073,7 +1072,7 @@
                         </div>
 
                         <div class="form-row"><label>淋巴轉移</label>
-                            <select class="form-select" id="id-lymph" onchange="document.getElementById('lymph-detail-container').style.display = (this.value === '有') ? 'block' : 'none';"><option value="無">無</option><option value="眼">有</option></select>
+                            <select class="form-select" id="id-lymph" onchange="document.getElementById('lymph-detail-container').style.display = (this.value === '有') ? 'block' : 'none';"><option value="無">無</option><option value="有">有</option></select>
                             <div id="lymph-detail-container" class="conditional-div">
                                 <div class="grid-2">
                                     <div><label>取出(顆)</label><input type="number" id="id-lymph-total" class="form-input" min="0"></div>
@@ -1082,19 +1081,19 @@
                             </div>
                         </div>
                         <div class="form-row"><label>遠處轉移</label>
-                            <select class="form-select" id="id-meta" onchange="document.getElementById('meta-detail-container').style.display = (this.value === '有') ? 'block' : 'none';"><option value="無">無</option><option value="眼">有</option></select>
+                            <select class="form-select" id="id-meta" onchange="document.getElementById('meta-detail-container').style.display = (this.value === '有') ? 'block' : 'none';"><option value="無">無</option><option value="有">有</option></select>
                             <div id="meta-detail-container" class="conditional-div">
                                 <label>部位</label>
                                 <select class="form-select" id="id-meta-site" onchange="document.getElementById('meta-site-other-container').style.display = (this.value === '其他') ? 'block' : 'none';">
-                                    <option value="骨骼" ${idCardState.metaSiteRaw === '骨骼' ? 'selected' : ''}>骨骼</option>
-                                    <option value="腦部" ${idCardState.metaSiteRaw === '腦部' ? 'selected' : ''}>腦部</option>
-                                    <option value="肝臟" ${idCardState.metaSiteRaw === '肝臟' ? 'selected' : ''}>肝臟</option>
-                                    <option value="肺部" ${idCardState.metaSiteRaw === '肺部' ? 'selected' : ''}>肺部</option>
-                                    <option value="腹膜" ${idCardState.metaSiteRaw === '腹膜' ? 'selected' : ''}>腹膜</option>
-                                    <option value="其他" ${!isStandardMeta && idCardState.metaSiteRaw ? 'selected' : ''}>其他</option>
+                                    <option value="骨骼">骨骼</option>
+                                    <option value="腦部">腦部</option>
+                                    <option value="肝臟">肝臟</option>
+                                    <option value="肺部">肺部</option>
+                                    <option value="腹膜">腹膜</option>
+                                    <option value="其他">其他</option>
                                 </select>
-                                <div id="meta-site-other-container" class="conditional-div" style="display:${!isStandardMeta && idCardState.metaSiteRaw ? 'block' : 'none'}; margin-top:0.5rem;">
-                                    <input type="text" id="id-meta-site-other" class="form-input" placeholder="請輸入轉移部位..." value="${!isStandardMeta ? (idCardState.metaSiteRaw || '') : ''}">
+                                <div id="meta-site-other-container" class="conditional-div" style="margin-top:0.5rem;">
+                                    <input type="text" id="id-meta-site-other" class="form-input" placeholder="請輸入轉移部位...">
                                 </div>
                             </div>
                         </div>
@@ -1113,12 +1112,24 @@
                 if (idCardState.ki67) document.getElementById('id-ki67').value = idCardState.ki67;
 
                 if (idCardState.lymphRaw && idCardState.lymphRaw === '有') {
-                    document.getElementById('id-lymph').value = '有'; document.getElementById('lymph-detail-container').style.display = 'block';
+                    document.getElementById('id-lymph').value = '有';
+                    document.getElementById('lymph-detail-container').style.display = 'block';
                     document.getElementById('id-lymph-total').value = idCardState.lymphTotal || '';
                     document.getElementById('id-lymph-inf').value = idCardState.lymphInf || '';
                 }
+
+                // 完美修復遠處轉移狀態與各級子欄位的數據回填連動
                 if (idCardState.metaRaw && idCardState.metaRaw === '有') {
-                    document.getElementById('id-meta').value = '有'; document.getElementById('meta-detail-container').style.display = 'block';
+                    document.getElementById('id-meta').value = '有';
+                    document.getElementById('meta-detail-container').style.display = 'block';
+                    if (isStandardMeta) {
+                        document.getElementById('id-meta-site').value = idCardState.metaSiteRaw;
+                        document.getElementById('meta-site-other-container').style.display = 'none';
+                    } else {
+                        document.getElementById('id-meta-site').value = '其他';
+                        document.getElementById('meta-site-other-container').style.display = 'block';
+                        document.getElementById('id-meta-site-other').value = idCardState.metaSiteRaw || '';
+                    }
                 }
             }
 
@@ -1150,10 +1161,13 @@
 
                 let metaRaw = document.getElementById('id-meta').value;
                 let metaSiteVal = document.getElementById('id-meta-site').value;
-                if (metaRaw === '有' && metaSiteVal === '其他' && checkEmpty(document.getElementById('id-meta-site-other').value)) {
-                    return alert("⚠️ 【遺漏填寫】請填寫「其他」遠處轉移部位！");
+                if (metaRaw === '有') {
+                    if (metaSiteVal === '其他') {
+                        let metaOther = document.getElementById('id-meta-site-other').value;
+                        if (checkEmpty(metaOther)) return alert("⚠️ 【遺漏填寫】請填寫「其他」遠處轉移部位！");
+                        metaSiteVal = metaOther;
+                    }
                 }
-                if (metaSiteVal === '其他') metaSiteVal = document.getElementById('id-meta-site-other').value;
 
                 let metaStr = metaRaw;
                 if (metaRaw === '有') metaStr = `有 (部位: ${metaSiteVal})`;
@@ -1499,7 +1513,7 @@
                         <div class="form-row"><label>症狀選擇</label>
                             <select class="form-select" id="se-symp" onchange="document.getElementById('se-other-container').style.display = (this.value === '其他') ? 'block' : 'none';">
                                 <option value="噁心 / 嘔吐">噁心 / 嘔吐</option><option value="腹瀉">腹瀉</option><option value="便秘">便秘</option><option value="皮疹">皮疹</option><option value="發燒">發燒</option>
-                                <option value="疲憊">疲憊</option><option value="掉髮">掉髮</option><option value="手足麻木 / 刺痛">手足麻木 / 刺痛</option><option value="其他">其他 (請自行輸入)</option>
+                                <option value="疲憊">疲憊</option><option value="掉髮">掉髮</option><option value="手足麻木 / 刺痛">手足麻麻 / 刺痛</option><option value="其他">其他 (請自行輸入)</option>
                             </select>
                             <div id="se-other-container" class="conditional-div"><input type="text" id="se-symp-other" class="form-input" placeholder="請輸入您的其他症狀..."></div>
                         </div>
