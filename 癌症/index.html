@@ -821,7 +821,7 @@
                     const today = new Date(getTodayString());
                     if (selected > today) {
                         document.getElementById(inputId).value = getTodayString();
-                        alert("⚠️ 【日期錯誤修正】\n您選擇了未來的日期！\n系統已自動為您更正為「今日」，請再次點擊儲存按鈕以完成儲存。");
+                        alert("⚠️ 【日期錯誤修正】\n您選擇了未來的日期！\n系統已自動為您更正為「今日」，請重新點選儲存。");
                         return false;
                     }
                 }
@@ -964,6 +964,14 @@
                 }
             }
 
+            function saveDataToLocal() {
+                localStorage.setItem('7c_idCardState', JSON.stringify(idCardState));
+                localStorage.setItem('7c_txRecords', JSON.stringify(txRecords));
+                localStorage.setItem('7c_labRecords', JSON.stringify(labRecords));
+                localStorage.setItem('7c_examRecords', JSON.stringify(examRecords));
+                localStorage.setItem('7c_seRecords', JSON.stringify(seRecords));
+            }
+
             function init() {
                 window.scrollTo(0, 0);
                 loadData();
@@ -1019,6 +1027,7 @@
                 if (section === 'links') renderLinksSection();
             }
 
+            // ================= 1. 身分證 =================
             function renderReportSection() {
                 const content = document.getElementById('mainContent');
                 let defaultSite = '乳癌';
@@ -1161,15 +1170,18 @@
                 saveDataToLocal();
                 checkLockedOncology();
 
+                // 🌟 優化體驗：先重新繪製畫面（加上鎖定外觀），並且滾動到最上方
                 renderReportSection();
-                const menuGrid = document.getElementById('main-menu-grid');
-                if (menuGrid) menuGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
 
+                // 🌟 延遲 600 毫秒：讓瀏覽器有時間把「鎖定反灰」的畫面確實畫出來給病人看，然後再用 confirm 引導
                 setTimeout(() => {
-                    alert('💾 身分證資料已完整儲存！\n您的專屬癌別狀態已鎖定。\n\n👉 接著將為您跳轉至「治療紀錄」填寫。');
-                    switchSection('tx');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }, 300);
+                    let goNext = confirm('💾 身分證資料已完整儲存！\n您的專屬癌別狀態已成功鎖定（如背景畫面所示）。\n\n👉 點選「確定」將接著帶您前往填寫「治療紀錄」。');
+                    if (goNext) {
+                        switchSection('tx');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                }, 600);
             }
 
             function deleteIdCard() {
@@ -1191,6 +1203,18 @@
 
                 if (typeKey === 'chemo') {
                     if (checkEmpty(document.getElementById('tx-times').value) || checkEmpty(document.getElementById('tx-freq').value) || checkEmpty(document.getElementById('tx-nextdate').value)) return alert("⚠️ 請完整填寫化療/標靶資訊！");
+
+                    let latestNextDate = null;
+                    txRecords.forEach(r => {
+                        if (r.typeKey === 'chemo' && r.nextDate) {
+                            if (!latestNextDate || new Date(r.nextDate) > new Date(latestNextDate)) {
+                                latestNextDate = r.nextDate;
+                            }
+                        }
+                    });
+                    if (latestNextDate && new Date(inputDate) < new Date(latestNextDate)) {
+                        return alert(`⚠️ 【錯誤提醒】\n系統顯示您前次預定的「下次治療時間」為 ${latestNextDate}。\n請確認此次填寫時間不得早於該日期，以免重複或錯亂。`);
+                    }
                 } else if (typeKey === 'surgery') {
                     if (checkEmpty(document.getElementById('tx-surg-name').value) || checkEmpty(document.getElementById('tx-surg-site').value)) return alert("⚠️ 請填寫手術名稱與部位！");
                 } else if (typeKey === 'rt') {
@@ -1205,6 +1229,8 @@
 
                 txRecords.push(record); txRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 saveDataToLocal(); renderTxSection(); updateHistoryPanel();
+
+                alert('💾 治療紀錄已成功儲存！');
                 const menuGrid = document.getElementById('main-menu-grid');
                 if (menuGrid) menuGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
@@ -1221,6 +1247,10 @@
                 checkLabAlerts(newRecord); labRecords.push(newRecord);
                 labRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 saveDataToLocal(); renderLabSection(); updateHistoryPanel();
+
+                alert('💾 抽血/體重紀錄已成功儲存！');
+                const menuGrid = document.getElementById('main-menu-grid');
+                if (menuGrid) menuGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
 
             function saveExamData() {
@@ -1234,6 +1264,10 @@
                 examRecords.push({ recordDate: document.getElementById('exam-date').value || getTodayString(), examType: examTypeVal, examResult: document.getElementById('exam-result').value });
                 examRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 saveDataToLocal(); renderExamSection(); updateHistoryPanel();
+
+                alert('💾 檢查紀錄已成功儲存！');
+                const menuGrid = document.getElementById('main-menu-grid');
+                if (menuGrid) menuGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
 
             function saveSeData() {
@@ -1249,6 +1283,13 @@
                 seRecords.push({ recordDate: document.getElementById('se-date').value || getTodayString(), symp: sympVal, sev: sev, notes: document.getElementById('se-notes').value });
                 seRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 saveDataToLocal(); renderSeSection(); updateHistoryPanel();
+
+                alert('💾 副作用紀錄已成功儲存！');
+
+                setTimeout(() => {
+                    const historySection = document.getElementById('side-history');
+                    if (historySection) { historySection.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                }, 100);
             }
 
             return {
