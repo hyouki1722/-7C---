@@ -797,9 +797,10 @@
                 colorectal: { stage1: { t: "化療初期", d: "神經對『冷刺激』極敏感，拿冰冷物品請戴手套！" }, stage2: { t: "化療後第7~14天", d: "注意排便狀況，若嚴重腹瀉請補充水分與電解質。" }, stage3: { t: "放療期間", d: "肛門周圍如破皮，建議用水沖洗代替衛生紙擦拭。" } }
             };
 
+            // 完美修復陣列潔癖與多餘字串問題
             const sloganList = [
                 { main: "✨「每天都是新的開始，給自己一個大大的微笑！」", sub: "💪 用希望對抗癌症，我們與您並肩作戰！" },
-                { main: "❤️「治療是一段旅程，您的勇敢是最大的力量。」", sub: "🌼 好好吃飯、好好睡覺，身體會慢慢好起來的。」", sub: "🌼 好好吃飯、好好睡覺，身體會慢慢好起來的。" },
+                { main: "❤️「治療是一段旅程，您的勇敢是最大的力量。」", sub: "🌼 好好吃飯、好好睡覺，身體會慢慢好起來的。" },
                 { main: "🌈「抗癌路上不孤單，護理團隊隨時陪伴您。」", sub: "🌟 每一次的治療，都讓我們離健康更近一步。" },
                 { main: "😊「保持心情愉快，是最好的抗癌良藥！」", sub: "👏 多給自己一點掌聲，您真的做得很棒！" },
                 { main: "🛌「休息是為了走更遠的路，別忘了疼愛自己。」", sub: "🤝 相信醫護團隊，相信自己，未來我們一起走！" }
@@ -820,7 +821,6 @@
                     const selected = new Date(dateVal);
                     const today = new Date(getTodayString());
                     if (selected > today) {
-                        // 修復體驗盲點：提示日期已更正，要求病患重新儲存
                         document.getElementById(inputId).value = getTodayString();
                         alert("⚠️ 【日期錯誤修正】\n您選擇了未來的日期！\n系統已自動為您更正為「今日」，請再次點擊儲存按鈕以完成儲存。");
                         return false;
@@ -828,9 +828,6 @@
                 }
                 return true;
             }
-
-            // 修正口號清單中陣列第2個物件的多餘重複字串
-            sloganList[1] = { main: "❤️「治療是一段旅程，您的勇敢是最大的力量。」", sub: "🌼 好好吃飯、好好睡覺，身體會慢慢好起來的。" };
 
             function refreshSlogans() {
                 const container = document.getElementById('mobile-slogan-container');
@@ -986,10 +983,29 @@
                 currentOncology = type;
                 checkLockedOncology();
 
-                // 完美修復癌細胞型態重播清清空Bug：直接重繪身分證大區塊確保狀態一致
+                // 完美修復DOM洗白Bug：僅動態抽換「癌細胞型態」選項，不重新繪製整個表單
                 if (currentSection === 'report') {
-                    renderReportSection();
+                    const typeSelect = document.getElementById('id-type');
+                    if (typeSelect) {
+                        let oldVal = typeSelect.value;
+                        typeSelect.innerHTML = `<option value="">請選擇...</option>` + getCellTypeOptions();
+                        // 確保若原先選的值在新選項中存在，則自動保留，否則回歸空值
+                        if (Array.from(typeSelect.options).some(opt => opt.value === oldVal)) {
+                            typeSelect.value = oldVal;
+                        }
+                    }
+
+                    if (!fromIDCard) {
+                        const siteSelect = document.getElementById('id-site');
+                        if (siteSelect && !siteSelect.disabled) {
+                            if (type === 'breast') siteSelect.value = '乳癌';
+                            else if (type === 'lung') siteSelect.value = '肺癌';
+                            else if (type === 'colorectal') siteSelect.value = '大腸癌';
+                            document.getElementById('site-other-container').style.display = 'none';
+                        }
+                    }
                 }
+
                 if (currentSection === 'tx') { renderTxSection(); }
             }
 
@@ -1146,14 +1162,14 @@
 
                 let metaRaw = document.getElementById('id-meta').value;
                 let metaSiteVal = document.getElementById('id-meta-site').value;
+                let metaOtherVal = '';
                 if (metaRaw === '有') {
                     if (metaSiteVal === '其他') {
-                        let metaOther = document.getElementById('id-meta-site-other').value;
-                        if (checkEmpty(metaOther)) return alert("⚠️ 【遺漏填寫】請填寫「其他」遠處轉移部位！");
-                        metaSiteVal = metaOther;
+                        metaOtherVal = document.getElementById('id-meta-site-other').value;
+                        if (checkEmpty(metaOtherVal)) return alert("⚠️ 【遺漏填寫】請填寫「其他」遠處轉移部位！");
+                        metaSiteVal = metaOtherVal;
                     }
                 } else {
-                    // 修復漏洞：若轉移選「無」，清空子欄位殘留數據，防止結構干擾
                     metaSiteVal = '';
                 }
 
@@ -1167,27 +1183,41 @@
                     grade: document.getElementById('id-grade').value,
                     ki67: document.getElementById('id-ki67').value,
                     lymph: lymphStr, lymphRaw: document.getElementById('id-lymph').value, lymphTotal: lymphTotal, lymphInf: lymphInf,
-                    meta: metaRaw === '有' ? `有 (部位: ${metaSiteVal})` : metaRaw, metaRaw: metaRaw, metaSiteRaw: document.getElementById('id-meta-site').value,
+                    meta: metaRaw === '有' ? `有 (部位: ${metaSiteVal})` : metaRaw,
+                    metaRaw: metaRaw,
+                    metaSiteRaw: document.getElementById('id-meta-site').value === '其他' ? metaOtherVal : document.getElementById('id-meta-site').value,
                     lockedOncology: currentOncology
                 };
 
                 saveDataToLocal();
                 checkLockedOncology();
 
-                alert('💾 身分證資料已完整儲存！癌別狀態已更新。');
                 renderReportSection();
-
                 const menuGrid = document.getElementById('main-menu-grid');
-                if (menuGrid) { menuGrid.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+                if (menuGrid) {
+                    menuGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+
+                setTimeout(() => {
+                    alert('💾 身分證資料已完整儲存！\n您的專屬癌別狀態已更新並鎖定。');
+                }, 300);
             }
 
             function deleteIdCard() {
                 if (confirm("🚨【嚴重警告】\n確定要刪除身分證資料並「解除癌別鎖定」嗎？\n\n點選確定後，身分證資料將清空，您可以重新選擇並鎖定新的癌症部位。\n(放心，您的歷史治療、抽血與副作用紀錄不會被刪除)")) {
+
                     idCardState = {};
+                    currentOncology = 'breast';
+
                     saveDataToLocal();
                     checkLockedOncology();
                     renderReportSection();
-                    alert("✅ 身分證已成功刪除，癌別已為您解除鎖定！");
+
+                    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+
+                    setTimeout(() => {
+                        alert("✅ 身分證已成功刪除，癌別已為您解除鎖定！\n請重新填寫上方身分證資料。");
+                    }, 300);
                 }
             }
 
@@ -1498,7 +1528,7 @@
                         <div class="form-row"><label>症狀選擇</label>
                             <select class="form-select" id="se-symp" onchange="document.getElementById('se-other-container').style.display = (this.value === '其他') ? 'block' : 'none';">
                                 <option value="噁心 / 嘔吐">噁心 / 嘔吐</option><option value="腹瀉">腹瀉</option><option value="便秘">便秘</option><option value="皮疹">皮疹</option><option value="發燒">發燒</option>
-                                <option value="疲憊">疲憊</option><option value="掉髮">掉髮</option><option value="手足麻木 / 刺痛">手足麻麻 / 刺痛</option><option value="其他">其他 (請自行輸入)</option>
+                                <option value="疲憊">疲憊</option><option value="掉髮">掉髮</option><option value="手足麻木 / 刺痛">手足麻木 / 刺痛</option><option value="其他">其他 (請自行輸入)</option>
                             </select>
                             <div id="se-other-container" class="conditional-div"><input type="text" id="se-symp-other" class="form-input" placeholder="請輸入您的其他症狀..."></div>
                         </div>
