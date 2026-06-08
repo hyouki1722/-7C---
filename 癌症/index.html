@@ -773,15 +773,15 @@
 
         window.CareApp = (function () {
 
-            let idCardState = {};
-            let txRecords = [];
-            let labRecords = [];
-            let examRecords = [];
-            let seRecords = [];
-            let currentOncology = 'breast';
-            let currentSection = 'report';
+            var idCardState = {};
+            var txRecords = [];
+            var labRecords = [];
+            var examRecords = [];
+            var seRecords = [];
+            var currentOncology = 'breast';
+            var currentSection = 'report';
 
-            const CLINICAL_LAB_LIMITS = {
+            var CLINICAL_LAB_LIMITS = {
                 wbc: { name: 'WBC 白血球', min: 3.54, max: 9.06, panicMin: 1.0, panicMax: 50.0 },
                 anc: { name: 'ANC 嗜中性球', min: 1500, max: null, panicMin: 500, panicMax: null },
                 hb: { name: 'Hb 血色素', min: 10.8, max: 17.2, panicMin: 7.0, panicMax: 20.0 },
@@ -791,13 +791,13 @@
                 cr: { name: 'Cr 腎功能', min: 0.6, max: 1.3, panicMin: null, panicMax: 3.0 }
             };
 
-            const reminderDB = {
+            var reminderDB = {
                 breast: { stage1: { t: "第1週期前3天", d: "可能出現輕微噁心感，建議少量多餐。" }, stage2: { t: "化療後第7~14天", d: "白血球低下關鍵期！出入公共場所請配戴口罩。" }, stage3: { t: "放療期間", d: "照射部位皮膚請用溫水輕拍清潔，切勿用力揉搓。" } },
                 lung: { stage1: { t: "化療初期", d: "若有輕微乾咳，可使用溫水漱口保持喉嚨濕潤。" }, stage2: { t: "化療後第7~14天", d: "若體溫超過 38 度請立即就醫，不可自行退燒。" }, stage3: { t: "放療期間", d: "若出現吞嚥疼痛，建議改吃軟質或半流質食物。" } },
                 colorectal: { stage1: { t: "化療初期", d: "神經對『冷刺激』極敏感，拿冰冷物品請戴手套！" }, stage2: { t: "化療後第7~14天", d: "注意排便狀況，若嚴重腹瀉請補充水分與電解質。" }, stage3: { t: "放療期間", d: "肛門周圍如破皮，建議用水沖洗代替衛生紙擦拭。" } }
             };
 
-            const sloganList = [
+            var sloganList = [
                 { main: "✨「每天都是新的開始，給自己一個大大的微笑！」", sub: "💪 用希望對抗癌症，我們與您並肩作戰！" },
                 { main: "❤️「治療是一段旅程，您的勇敢是最大的力量。」", sub: "🌼 好好吃飯、好好睡覺，身體會慢慢好起來的。" },
                 { main: "🌈「抗癌路上不孤單，護理團隊隨時陪伴您。」", sub: "🌟 每一次的治療，都讓我們離健康更近一步。" },
@@ -810,15 +810,19 @@
             }
 
             function getTodayString() {
-                const today = new Date();
-                return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                var today = new Date();
+                var month = String(today.getMonth() + 1);
+                var day = String(today.getDate());
+                if (month.length < 2) month = '0' + month;
+                if (day.length < 2) day = '0' + day;
+                return today.getFullYear() + '-' + month + '-' + day;
             }
 
             function validateDateGuard(inputId) {
-                const dateVal = document.getElementById(inputId).value;
+                var dateVal = document.getElementById(inputId).value;
                 if (dateVal) {
-                    const selected = new Date(dateVal);
-                    const today = new Date(getTodayString());
+                    var selected = new Date(dateVal);
+                    var today = new Date(getTodayString());
                     if (selected > today) {
                         document.getElementById(inputId).value = getTodayString();
                         alert("⚠️ 【日期錯誤修正】\n您選擇了未來的日期！\n系統已自動為您更正為「今日」，請重新點選儲存。");
@@ -829,50 +833,53 @@
             }
 
             function refreshSlogans() {
-                const container = document.getElementById('mobile-slogan-container');
+                var container = document.getElementById('mobile-slogan-container');
                 if (!container) return;
 
                 container.style.animation = 'none';
                 container.offsetHeight;
                 container.style.animation = 'fadeIn 0.5s ease-in-out';
 
-                let r = Math.floor(Math.random() * sloganList.length);
-                container.innerHTML = `
-                    <div class="main-slogan">${sloganList[r].main}</div>
-                    <div class="sub-slogan">${sloganList[r].sub}</div>
-                `;
+                var r = Math.floor(Math.random() * sloganList.length);
+                container.innerHTML = '<div class="main-slogan">' + sloganList[r].main + '</div>' +
+                    '<div class="sub-slogan">' + sloganList[r].sub + '</div>';
             }
 
             function updateReminder() {
-                const stage = document.getElementById('course-selector').value;
-                const data = reminderDB[currentOncology][stage];
+                var stage = document.getElementById('course-selector').value;
+                var data = reminderDB[currentOncology][stage];
                 document.getElementById('pushTitle').innerText = "今日提醒：" + data.t;
                 document.getElementById('pushText').innerText = data.d;
             }
 
             function updateHistoryPanel() {
-                /* 降級 ES6 Set() 與 Array.from() 確保 LINE 舊版核心不會崩潰 */
-                const dateMap = {};
-                txRecords.forEach(r => { if (r.recordDate) dateMap[r.recordDate] = true; });
-                labRecords.forEach(r => { if (r.recordDate) dateMap[r.recordDate] = true; });
-                examRecords.forEach(r => { if (r.recordDate) dateMap[r.recordDate] = true; });
-                seRecords.forEach(r => { if (r.recordDate) dateMap[r.recordDate] = true; });
+                var dateMap = {};
+                for (var i = 0; i < txRecords.length; i++) { if (txRecords[i].recordDate) dateMap[txRecords[i].recordDate] = true; }
+                for (var i = 0; i < labRecords.length; i++) { if (labRecords[i].recordDate) dateMap[labRecords[i].recordDate] = true; }
+                for (var i = 0; i < examRecords.length; i++) { if (examRecords[i].recordDate) dateMap[examRecords[i].recordDate] = true; }
+                for (var i = 0; i < seRecords.length; i++) { if (seRecords[i].recordDate) dateMap[seRecords[i].recordDate] = true; }
 
-                const listDiv = document.getElementById('side-history-list');
-                const dates = Object.keys(dateMap);
+                var listDiv = document.getElementById('side-history-list');
+                var dates = Object.keys(dateMap);
                 if (dates.length === 0) {
                     listDiv.innerHTML = '<p style="color:#64748b; font-size:0.95rem;">尚無歷史紀錄。</p>';
                     return;
                 }
 
-                const sortedDates = dates.sort((a, b) => new Date(b) - new Date(a));
-                listDiv.innerHTML = sortedDates.map(date => `<button class="action-btn" style="background:#e0f2fe; color:#0369a1; padding: 1rem; font-size: 1.1rem;" onclick="CareApp.showDailyReport('${date}')">📅 ${date} 健康總表</button>`).join('');
+                var sortedDates = dates.sort(function (a, b) { return new Date(b) - new Date(a); });
+                var html = '';
+                for (var i = 0; i < sortedDates.length; i++) {
+                    html += '<button class="action-btn" style="background:#e0f2fe; color:#0369a1; padding: 1rem; font-size: 1.1rem;" onclick="CareApp.showDailyReport(\'' + sortedDates[i] + '\')">📅 ' + sortedDates[i] + ' 健康總表</button>';
+                }
+                listDiv.innerHTML = html;
             }
 
             function checkLockedOncology() {
                 if (idCardState.lockedOncology) {
                     currentOncology = idCardState.lockedOncology;
-                    document.querySelectorAll('.tab-btn').forEach(btn => {
+                    var btns = document.querySelectorAll('.tab-btn');
+                    for (var i = 0; i < btns.length; i++) {
+                        var btn = btns[i];
                         if (btn.id !== 'tab-' + currentOncology) {
                             btn.disabled = true;
                             btn.classList.remove('active');
@@ -880,23 +887,25 @@
                             btn.disabled = false;
                             btn.classList.add('active');
                         }
-                    });
+                    }
                 } else {
-                    document.querySelectorAll('.tab-btn').forEach(btn => {
+                    var btns = document.querySelectorAll('.tab-btn');
+                    for (var i = 0; i < btns.length; i++) {
+                        var btn = btns[i];
                         btn.disabled = false;
                         btn.classList.remove('active');
-                    });
-                    const activeBtn = document.getElementById(`tab-${currentOncology}`);
+                    }
+                    var activeBtn = document.getElementById('tab-' + currentOncology);
                     if (activeBtn) activeBtn.classList.add('active');
                 }
                 updateReminder();
             }
 
             function getCellTypeOptions() {
-                if (currentOncology === 'breast') return `<option value="浸潤性導管癌">浸潤性導管癌</option><option value="原位癌">原位癌</option><option value="浸潤性小葉癌">浸潤性小葉癌</option><option value="其他">其他</option>`;
-                if (currentOncology === 'lung') return `<option value="肺腺癌">肺腺癌</option><option value="鱗狀細胞癌">鱗狀細胞癌</option><option value="小細胞肺癌">小細胞肺癌</option><option value="大細胞癌">大細胞癌</option><option value="其他">其他</option>`;
-                if (currentOncology === 'colorectal') return `<option value="腺癌">腺癌</option><option value="黏液腺癌">黏液腺癌</option><option value="印戒細胞癌">印戒細胞癌</option><option value="其他">其他</option>`;
-                return `<option value="其他">其他</option>`;
+                if (currentOncology === 'breast') return '<option value="浸潤性導管癌">浸潤性導管癌</option><option value="原位癌">原位癌</option><option value="浸潤性小葉癌">浸潤性小葉癌</option><option value="其他">其他</option>';
+                if (currentOncology === 'lung') return '<option value="肺腺癌">肺腺癌</option><option value="鱗狀細胞癌">鱗狀細胞癌</option><option value="小細胞肺癌">小細胞肺癌</option><option value="大細胞癌">大細胞癌</option><option value="其他">其他</option>';
+                if (currentOncology === 'colorectal') return '<option value="腺癌">腺癌</option><option value="黏液腺癌">黏液腺癌</option><option value="印戒細胞癌">印戒細胞癌</option><option value="其他">其他</option>';
+                return '<option value="其他">其他</option>';
             }
 
             function handleSiteChange(site) {
@@ -908,46 +917,46 @@
 
             function checkWeightLoss(newWeight, newDateStr) {
                 if (!newWeight || labRecords.length === 0) return;
-                let lastValidRecord = null;
-                for (let i = 0; i < labRecords.length; i++) {
+                var lastValidRecord = null;
+                for (var i = 0; i < labRecords.length; i++) {
                     if (labRecords[i].weight && !isNaN(parseFloat(labRecords[i].weight)) && labRecords[i].recordDate !== newDateStr) {
                         lastValidRecord = labRecords[i];
                         break;
                     }
                 }
                 if (!lastValidRecord) return;
-                let prevW = parseFloat(lastValidRecord.weight);
-                let currentW = parseFloat(newWeight);
+                var prevW = parseFloat(lastValidRecord.weight);
+                var currentW = parseFloat(newWeight);
                 if (isNaN(prevW) || isNaN(currentW) || prevW === 0) return;
 
-                let lossPercent = ((prevW - currentW) / prevW) * 100;
-                let daysDiff = (new Date(newDateStr) - new Date(lastValidRecord.recordDate)) / (1000 * 60 * 60 * 24);
+                var lossPercent = ((prevW - currentW) / prevW) * 100;
+                var daysDiff = (new Date(newDateStr) - new Date(lastValidRecord.recordDate)) / (1000 * 60 * 60 * 24);
                 if (daysDiff <= 0) return;
 
                 if (daysDiff <= 7 && lossPercent >= 2.0) {
-                    alert(`⚖️【體重快速流失警訊】\n您一週內體重減輕了 ${lossPercent.toFixed(1)}%！\n癌症化放療期間體重流失過快會影響免疫力，建議主動尋求營養師諮詢。`);
+                    alert('⚖️【體重快速流失警訊】\n您一週內體重減輕了 ' + lossPercent.toFixed(1) + '%！\n癌症化放療期間體重流失過快會影響免疫力，建議主動尋求營養師諮詢。');
                 } else if (daysDiff <= 30 && lossPercent >= 5.0) {
-                    alert(`⚖️【體重流失警訊】\n您一個月內體重減輕了 ${lossPercent.toFixed(1)}%！\n建議尋求營養師諮詢、調整飲食比例，並多補充高蛋白營養。`);
+                    alert('⚖️【體重流失警訊】\n您一個月內體重減輕了 ' + lossPercent.toFixed(1) + '%！\n建議尋求營養師諮詢、調整飲食比例，並多補充高蛋白營養。');
                 } else if (lossPercent >= 5.0) {
-                    alert(`⚖️【體重流失警訊】\n您本次體重比前次減輕了 ${lossPercent.toFixed(1)}%！\n建議尋求營養師諮詢、調整飲食比例。`);
+                    alert('⚖️【體重流失警訊】\n您本次體重比前次減輕了 ' + lossPercent.toFixed(1) + '%！\n建議尋求營養師諮詢、調整飲食比例。');
                 }
             }
 
             function checkLabAlerts(record) {
-                let alertMessages = [];
-                let panicMessages = [];
-                for (let key in CLINICAL_LAB_LIMITS) {
+                var alertMessages = [];
+                var panicMessages = [];
+                for (var key in CLINICAL_LAB_LIMITS) {
                     if (!record[key] || record[key] === '-') continue;
-                    let v = parseFloat(record[key]);
-                    let cfg = CLINICAL_LAB_LIMITS[key];
+                    var v = parseFloat(record[key]);
+                    var cfg = CLINICAL_LAB_LIMITS[key];
                     if (cfg.panicMin !== null && v <= cfg.panicMin) {
-                        panicMessages.push(`🚨【臨床危急】${cfg.name}極低：${v} (已達危急值 <=${cfg.panicMin})`);
+                        panicMessages.push('🚨【臨床危急】' + cfg.name + '極低：' + v + ' (已達危急值 <=' + cfg.panicMin + ')');
                     } else if (cfg.panicMax !== null && v >= cfg.panicMax) {
-                        panicMessages.push(`🚨【臨床危急】${cfg.name}極高：${v} (已達危急值 >=${cfg.panicMax})`);
+                        panicMessages.push('🚨【臨床危急】' + cfg.name + '極高：' + v + ' (已達危急值 >=' + cfg.panicMax + ')');
                     } else if (cfg.min !== null && v < cfg.min) {
-                        alertMessages.push(`⚠️ ${cfg.name}偏低：${v} (正常值: ${cfg.min}~${cfg.max || '無'})`);
+                        alertMessages.push('⚠️ ' + cfg.name + '偏低：' + v + ' (正常值: ' + cfg.min + '~' + (cfg.max || '無') + ')');
                     } else if (cfg.max !== null && v > cfg.max) {
-                        alertMessages.push(`⚠️ ${cfg.name}偏高：${v} (正常值: ${cfg.min || '無'}~${cfg.max})`);
+                        alertMessages.push('⚠️ ' + cfg.name + '偏高：' + v + ' (正常值: ' + (cfg.min || '無') + '~' + cfg.max + ')');
                     }
                 }
                 if (panicMessages.length > 0) {
@@ -958,7 +967,6 @@
             }
 
             function loadData() {
-                /* 加上 try catch 確保老舊瀏覽器解析 JSON 失敗時不會導致整支 JS 卡死 */
                 try { idCardState = JSON.parse(localStorage.getItem('7c_idCardState')) || {}; } catch (e) { idCardState = {}; }
                 try { txRecords = JSON.parse(localStorage.getItem('7c_txRecords')) || []; } catch (e) { txRecords = []; }
                 try { labRecords = JSON.parse(localStorage.getItem('7c_labRecords')) || []; } catch (e) { labRecords = []; }
@@ -980,7 +988,7 @@
                 updateHistoryPanel();
             }
 
-            function switchOncology(type, fromIDCard = false) {
+            function switchOncology(type, fromIDCard) {
                 if (idCardState.lockedOncology && type !== idCardState.lockedOncology) {
                     alert("⚠️ 您的癌別已由「身分證」鎖定。\n若需更改，請至選單「身分證」最下方點選「刪除身分證並解除鎖定」。");
                     return;
@@ -989,21 +997,20 @@
                 checkLockedOncology();
 
                 if (currentSection === 'report') {
-                    const typeSelect = document.getElementById('id-type');
+                    var typeSelect = document.getElementById('id-type');
                     if (typeSelect) {
-                        let oldVal = typeSelect.value;
-                        typeSelect.innerHTML = `<option value="">請選擇...</option>` + getCellTypeOptions();
+                        var oldVal = typeSelect.value;
+                        typeSelect.innerHTML = '<option value="">請選擇...</option>' + getCellTypeOptions();
 
-                        /* 降級相容寫法：替換 Array.prototype.some */
-                        let optionExists = false;
-                        for (let i = 0; i < typeSelect.options.length; i++) {
+                        var optionExists = false;
+                        for (var i = 0; i < typeSelect.options.length; i++) {
                             if (typeSelect.options[i].value === oldVal) optionExists = true;
                         }
                         if (optionExists) { typeSelect.value = oldVal; }
                     }
 
                     if (!fromIDCard) {
-                        const siteSelect = document.getElementById('id-site');
+                        var siteSelect = document.getElementById('id-site');
                         if (siteSelect && !siteSelect.disabled) {
                             if (type === 'breast') siteSelect.value = '乳癌';
                             else if (type === 'lung') siteSelect.value = '肺癌';
@@ -1018,9 +1025,12 @@
 
             function switchSection(section) {
                 currentSection = section;
-                document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+                var menus = document.querySelectorAll('.menu-btn');
+                for (var i = 0; i < menus.length; i++) {
+                    menus[i].classList.remove('active');
+                }
 
-                let targetMenuBtn = document.getElementById(`menu-${section}`);
+                var targetMenuBtn = document.getElementById('menu-' + section);
                 if (targetMenuBtn) targetMenuBtn.classList.add('active');
 
                 if (section === 'report') renderReportSection();
@@ -1033,73 +1043,71 @@
 
             // ================= 1. 身分證 =================
             function renderReportSection() {
-                const content = document.getElementById('mainContent');
-                let defaultSite = '乳癌';
+                var content = document.getElementById('mainContent');
+                var defaultSite = '乳癌';
                 if (currentOncology === 'lung') defaultSite = '肺癌';
                 if (currentOncology === 'colorectal') defaultSite = '大腸癌';
 
-                const siteRawVal = idCardState.siteRaw || defaultSite;
+                var siteRawVal = idCardState.siteRaw || defaultSite;
+                var isStandardSite = ['乳癌', '肺癌', '大腸癌', ''].indexOf(siteRawVal) !== -1;
+                var isStandardMeta = ['骨骼', '腦部', '肝臟', '肺部', '腹膜', ''].indexOf(idCardState.metaSiteRaw || '') !== -1;
+                var isLocked = !!idCardState.lockedOncology;
 
-                /* 修復致命錯誤：將 ES6 的 .includes() 降級為 .indexOf() !== -1，確保 LINE 內建瀏覽器完全相容不卡死 */
-                const isStandardSite = ['乳癌', '肺癌', '大腸癌', ''].indexOf(siteRawVal) !== -1;
-                const isStandardMeta = ['骨骼', '腦部', '肝臟', '肺部', '腹膜', ''].indexOf(idCardState.metaSiteRaw || '') !== -1;
-                const isLocked = !!idCardState.lockedOncology;
-
-                content.innerHTML = `
-                    <div class="info-panel">
-                        <div class="info-title">🪪 我的癌症身分證</div>
-                        <div class="form-row"><label>報告日期</label><input type="date" id="id-date" class="form-input"></div>
-                        <div class="form-row">
-                            <label>癌症部位 ${isLocked ? '<span style="color:#dc2626; font-size:0.9rem;">(已鎖定)</span>' : ''}</label>
-                            <select class="form-select" id="id-site" onchange="CareApp.handleSiteChange(this.value)" ${isLocked ? 'disabled style="background:#e2e8f0; color:#64748b;"' : ''}>
-                                <option value="乳癌" ${siteRawVal === '乳癌' ? 'selected' : ''}>乳癌</option>
-                                <option value="肺癌" ${siteRawVal === '肺癌' ? 'selected' : ''}>肺癌</option>
-                                <option value="大腸癌" ${siteRawVal === '大腸癌' ? 'selected' : ''}>大腸癌</option>
-                                <option value="其他" ${!isStandardSite && siteRawVal ? 'selected' : ''}>其他</option>
-                            </select>
-                            <div id="site-other-container" class="conditional-div" style="display:${!isStandardSite && siteRawVal ? 'block' : 'none'};">
-                                <input type="text" id="id-site-other" class="form-input" placeholder="請輸入您的癌症部位..." value="${!isStandardSite ? siteRawVal : ''}" ${isLocked ? 'disabled' : ''}>
-                            </div>
-                        </div>
-                        <div class="form-row"><label>癌細胞型態</label>
-                            <select class="form-select" id="id-type"><option value="">請選擇...</option>${getCellTypeOptions()}</select>
-                        </div>
-                        <div class="grid-2">
-                            <div class="form-row"><label>大小 (cm)</label><input type="number" id="id-size" min="0" step="0.1" class="form-input"></div>
-                            <div class="form-row"><label>期別</label><select class="form-select" id="id-stage"><option value=""></option><option value="原位癌">原位癌</option><option value="I期">I期</option><option value="II期">II期</option><option value="III期">III期</option><option value="IV期">IV期</option><option value="不詳">不詳</option></select></div>
-                        </div>
-                        <hr style="border:0; border-top:1px dashed #cbd5e1; margin: 0.5rem 0 1rem 0;">
-                        <div class="form-row"><label>細胞分化程度</label><select class="form-select" id="id-grade"><option value=""></option><option value="不詳">不詳</option><option value="低惡性度G1">低惡性度G1</option><option value="中惡性度G2">中惡性度G2</option><option value="高惡性度G3">高惡性度G3</option></select></div>
-                        <div class="form-row">
-                            <label>Ki 67 指數</label>
-                            <select class="form-select" id="id-ki67">
-                                <option value="">請選擇...</option><option value="不詳">不詳</option><option value="低增殖活性">低增殖活性（細胞分裂較慢）</option><option value="高增殖活性">高增殖活性（細胞分裂較快）</option>
-                            </select>
-                        </div>
-                        <div class="form-row"><label>淋巴轉移</label>
-                            <select class="form-select" id="id-lymph" onchange="document.getElementById('lymph-detail-container').style.display = (this.value === '有') ? 'block' : 'none';"><option value="無">無</option><option value="有">有</option></select>
-                            <div id="lymph-detail-container" class="conditional-div">
-                                <div class="grid-2">
-                                    <div><label>取出(顆)</label><input type="number" id="id-lymph-total" class="form-input" min="0"></div>
-                                    <div><label>感染(顆)</label><input type="number" id="id-lymph-inf" class="form-input" min="0"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-row"><label>遠處轉移</label>
-                            <select class="form-select" id="id-meta" onchange="document.getElementById('meta-detail-container').style.display = (this.value === '有') ? 'block' : 'none';"><option value="無">無</option><option value="有">有</option></select>
-                            <div id="meta-detail-container" class="conditional-div">
-                                <label>部位</label>
-                                <select class="form-select" id="id-meta-site" onchange="document.getElementById('meta-site-other-container').style.display = (this.value === '其他') ? 'block' : 'none';">
-                                    <option value="骨骼">骨骼</option><option value="腦部">腦部</option><option value="肝臟">肝臟</option><option value="肺部">肺部</option><option value="腹膜">腹膜</option><option value="其他">其他</option>
-                                </select>
-                                <div id="meta-site-other-container" class="conditional-div" style="margin-top:0.5rem;">
-                                    <input type="text" id="id-meta-site-other" class="form-input" placeholder="請輸入轉移部位...">
-                                </div>
-                            </div>
-                        </div>
-                        <button class="btn-save" onclick="CareApp.saveIdCard()">💾 儲存${isLocked ? '修改' : '並鎖定癌別'}</button>
-                        ${isLocked ? `<button class="btn-delete-id" onclick="CareApp.deleteIdCard()">🗑️ 刪除身分證並解除鎖定</button>` : ''}
-                    </div>`;
+                content.innerHTML =
+                    '<div class="info-panel">' +
+                    '<div class="info-title">🪪 我的癌症身分證</div>' +
+                    '<div class="form-row"><label>報告日期</label><input type="date" id="id-date" class="form-input"></div>' +
+                    '<div class="form-row">' +
+                    '<label>癌症部位 ' + (isLocked ? '<span style="color:#dc2626; font-size:0.9rem;">(已鎖定)</span>' : '') + '</label>' +
+                    '<select class="form-select" id="id-site" onchange="CareApp.handleSiteChange(this.value)" ' + (isLocked ? 'disabled style="background:#e2e8f0; color:#64748b;"' : '') + '>' +
+                    '<option value="乳癌" ' + (siteRawVal === '乳癌' ? 'selected' : '') + '>乳癌</option>' +
+                    '<option value="肺癌" ' + (siteRawVal === '肺癌' ? 'selected' : '') + '>肺癌</option>' +
+                    '<option value="大腸癌" ' + (siteRawVal === '大腸癌' ? 'selected' : '') + '>大腸癌</option>' +
+                    '<option value="其他" ' + (!isStandardSite && siteRawVal ? 'selected' : '') + '>其他</option>' +
+                    '</select>' +
+                    '<div id="site-other-container" class="conditional-div" style="display:' + (!isStandardSite && siteRawVal ? 'block' : 'none') + ';">' +
+                    '<input type="text" id="id-site-other" class="form-input" placeholder="請輸入您的癌症部位..." value="' + (!isStandardSite ? siteRawVal : '') + '" ' + (isLocked ? 'disabled' : '') + '>' +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="form-row"><label>癌細胞型態</label>' +
+                    '<select class="form-select" id="id-type"><option value="">請選擇...</option>' + getCellTypeOptions() + '</select>' +
+                    '</div>' +
+                    '<div class="grid-2">' +
+                    '<div class="form-row"><label>大小 (cm)</label><input type="number" id="id-size" min="0" step="0.1" class="form-input"></div>' +
+                    '<div class="form-row"><label>期別</label><select class="form-select" id="id-stage"><option value=""></option><option value="原位癌">原位癌</option><option value="I期">I期</option><option value="II期">II期</option><option value="III期">III期</option><option value="IV期">IV期</option><option value="不詳">不詳</option></select></div>' +
+                    '</div>' +
+                    '<hr style="border:0; border-top:1px dashed #cbd5e1; margin: 0.5rem 0 1rem 0;">' +
+                    '<div class="form-row"><label>細胞分化程度</label><select class="form-select" id="id-grade"><option value=""></option><option value="不詳">不詳</option><option value="低惡性度G1">低惡性度G1</option><option value="中惡性度G2">中惡性度G2</option><option value="高惡性度G3">高惡性度G3</option></select></div>' +
+                    '<div class="form-row">' +
+                    '<label>Ki 67 指數</label>' +
+                    '<select class="form-select" id="id-ki67">' +
+                    '<option value="">請選擇...</option><option value="不詳">不詳</option><option value="低增殖活性">低增殖活性（細胞分裂較慢）</option><option value="高增殖活性">高增殖活性（細胞分裂較快）</option>' +
+                    '</select>' +
+                    '</div>' +
+                    '<div class="form-row"><label>淋巴轉移</label>' +
+                    '<select class="form-select" id="id-lymph" onchange="document.getElementById(\'lymph-detail-container\').style.display = (this.value === \'有\') ? \'block\' : \'none\';"><option value="無">無</option><option value="有">有</option></select>' +
+                    '<div id="lymph-detail-container" class="conditional-div">' +
+                    '<div class="grid-2">' +
+                    '<div><label>取出(顆)</label><input type="number" id="id-lymph-total" class="form-input" min="0"></div>' +
+                    '<div><label>感染(顆)</label><input type="number" id="id-lymph-inf" class="form-input" min="0"></div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="form-row"><label>遠處轉移</label>' +
+                    '<select class="form-select" id="id-meta" onchange="document.getElementById(\'meta-detail-container\').style.display = (this.value === \'有\') ? \'block\' : \'none\';"><option value="無">無</option><option value="有">有</option></select>' +
+                    '<div id="meta-detail-container" class="conditional-div">' +
+                    '<label>部位</label>' +
+                    '<select class="form-select" id="id-meta-site" onchange="document.getElementById(\'meta-site-other-container\').style.display = (this.value === \'其他\') ? \'block\' : \'none\';">' +
+                    '<option value="骨骼">骨骼</option><option value="腦部">腦部</option><option value="肝臟">肝臟</option><option value="肺部">肺部</option><option value="腹膜">腹膜</option><option value="其他">其他</option>' +
+                    '</select>' +
+                    '<div id="meta-site-other-container" class="conditional-div" style="margin-top:0.5rem;">' +
+                    '<input type="text" id="id-meta-site-other" class="form-input" placeholder="請輸入轉移部位...">' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '<button class="btn-save" onclick="CareApp.saveIdCard()">💾 儲存' + (isLocked ? '修改' : '並鎖定癌別') + '</button>' +
+                    (isLocked ? '<button class="btn-delete-id" onclick="CareApp.deleteIdCard()">🗑️ 刪除身分證並解除鎖定</button>' : '') +
+                    '</div>';
 
                 if (idCardState.date) document.getElementById('id-date').value = idCardState.date;
                 else document.getElementById('id-date').value = getTodayString();
@@ -1130,9 +1138,9 @@
 
             function saveIdCard() {
                 if (!validateDateGuard('id-date')) return;
-                let siteVal = document.getElementById('id-site').value;
+                var siteVal = document.getElementById('id-site').value;
                 if (siteVal === '其他') {
-                    let otherInput = document.getElementById('id-site-other').value;
+                    var otherInput = document.getElementById('id-site-other').value;
                     if (checkEmpty(otherInput)) return alert("⚠️ 【遺漏填寫】請填寫您的「其他」癌症部位！");
                     siteVal = otherInput;
                 }
@@ -1142,17 +1150,17 @@
                 if (checkEmpty(document.getElementById('id-grade').value)) return alert("⚠️ 【遺漏填寫】請選擇「細胞分化程度」！");
                 if (checkEmpty(document.getElementById('id-ki67').value)) return alert("⚠️ 【遺漏填寫】請選擇「Ki 67 指數」！");
 
-                let lymphStr = document.getElementById('id-lymph').value;
-                let lymphTotal = document.getElementById('id-lymph-total').value;
-                let lymphInf = document.getElementById('id-lymph-inf').value;
+                var lymphStr = document.getElementById('id-lymph').value;
+                var lymphTotal = document.getElementById('id-lymph-total').value;
+                var lymphInf = document.getElementById('id-lymph-inf').value;
                 if (lymphStr === '有') {
                     if (checkEmpty(lymphTotal) || checkEmpty(lymphInf)) return alert("⚠️ 【遺漏填寫】請填寫淋巴轉移細節！");
-                    lymphStr = `有 (取出 ${lymphTotal} 顆，感染 ${lymphInf} 顆)`;
+                    lymphStr = '有 (取出 ' + lymphTotal + ' 顆，感染 ' + lymphInf + ' 顆)';
                 }
 
-                let metaRaw = document.getElementById('id-meta').value;
-                let metaSiteVal = document.getElementById('id-meta-site').value;
-                let metaOtherVal = '';
+                var metaRaw = document.getElementById('id-meta').value;
+                var metaSiteVal = document.getElementById('id-meta-site').value;
+                var metaOtherVal = '';
                 if (metaRaw === '有') {
                     if (metaSiteVal === '其他') {
                         metaOtherVal = document.getElementById('id-meta-site-other').value;
@@ -1168,7 +1176,7 @@
                     stage: document.getElementById('id-stage').value, grade: document.getElementById('id-grade').value,
                     ki67: document.getElementById('id-ki67').value,
                     lymph: lymphStr, lymphRaw: document.getElementById('id-lymph').value, lymphTotal: lymphTotal, lymphInf: lymphInf,
-                    meta: metaRaw === '有' ? `有 (部位: ${metaSiteVal})` : metaRaw, metaRaw: metaRaw,
+                    meta: metaRaw === '有' ? ('有 (部位: ' + metaSiteVal + ')') : metaRaw, metaRaw: metaRaw,
                     metaSiteRaw: document.getElementById('id-meta-site').value === '其他' ? metaOtherVal : document.getElementById('id-meta-site').value,
                     lockedOncology: currentOncology
                 };
@@ -1177,13 +1185,13 @@
                 checkLockedOncology();
 
                 renderReportSection();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo(0, 0);
 
-                setTimeout(() => {
-                    let goNext = confirm('💾 身分證資料已完整儲存！\n您的專屬癌別狀態已成功鎖定（如背景畫面所示）。\n\n👉 點選「確定」將接著帶您前往填寫「治療紀錄」。');
+                setTimeout(function () {
+                    var goNext = confirm('💾 身分證資料已完整儲存！\n您的專屬癌別狀態已成功鎖定（如背景畫面所示）。\n\n👉 點選「確定」將接著帶您前往填寫「治療紀錄」。');
                     if (goNext) {
                         switchSection('tx');
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        window.scrollTo(0, 0);
                     }
                 }, 600);
             }
@@ -1193,31 +1201,32 @@
                     idCardState = {}; currentOncology = 'breast';
                     saveDataToLocal(); checkLockedOncology();
                     renderReportSection();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                    setTimeout(() => { alert("✅ 身分證已成功刪除！"); }, 300);
+                    window.scrollTo(0, 0);
+                    setTimeout(function () { alert("✅ 身分證已成功刪除！"); }, 300);
                 }
             }
 
             function saveTxData() {
                 if (!validateDateGuard('tx-date')) return;
-                const typeKey = document.getElementById('tx-type').value;
-                const sel = document.getElementById('tx-type');
-                const displayType = sel.options[sel.selectedIndex].text;
-                let inputDate = document.getElementById('tx-date').value || getTodayString();
+                var typeKey = document.getElementById('tx-type').value;
+                var sel = document.getElementById('tx-type');
+                var displayType = sel.options[sel.selectedIndex].text;
+                var inputDate = document.getElementById('tx-date').value || getTodayString();
 
                 if (typeKey === 'chemo') {
                     if (checkEmpty(document.getElementById('tx-times').value) || checkEmpty(document.getElementById('tx-freq').value) || checkEmpty(document.getElementById('tx-nextdate').value)) return alert("⚠️ 請完整填寫化療/標靶資訊！");
 
-                    let latestNextDate = null;
-                    txRecords.forEach(r => {
+                    var latestNextDate = null;
+                    for (var i = 0; i < txRecords.length; i++) {
+                        var r = txRecords[i];
                         if (r.typeKey === 'chemo' && r.nextDate) {
                             if (!latestNextDate || new Date(r.nextDate) > new Date(latestNextDate)) {
                                 latestNextDate = r.nextDate;
                             }
                         }
-                    });
+                    }
                     if (latestNextDate && new Date(inputDate) < new Date(latestNextDate)) {
-                        return alert(`⚠️ 【錯誤提醒】\n系統顯示您前次預定的「下次治療時間」為 ${latestNextDate}。\n請確認此次填寫時間不得早於該日期，以免重複或錯亂。`);
+                        return alert('⚠️ 【錯誤提醒】\n系統顯示您前次預定的「下次治療時間」為 ' + latestNextDate + '。\n請確認此次填寫時間不得早於該日期，以免重複或錯亂。');
                     }
                 } else if (typeKey === 'surgery') {
                     if (checkEmpty(document.getElementById('tx-surg-name').value) || checkEmpty(document.getElementById('tx-surg-site').value)) return alert("⚠️ 請填寫手術名稱與部位！");
@@ -1225,27 +1234,26 @@
                     if (checkEmpty(document.getElementById('tx-rt-site').value) || checkEmpty(document.getElementById('tx-rt-dose').value) || checkEmpty(document.getElementById('tx-rt-progress').value)) return alert("⚠️ 請填寫放療資訊！");
                 } else if (typeKey === 'other' && checkEmpty(document.getElementById('tx-other-name').value)) return alert("⚠️ 請輸入治療名稱！");
 
-                let record = { recordDate: inputDate, typeKey: typeKey, displayType: displayType, notes: document.getElementById('tx-notes').value };
+                var record = { recordDate: inputDate, typeKey: typeKey, displayType: displayType, notes: document.getElementById('tx-notes').value };
                 if (typeKey === 'chemo') { record.chemoTimes = document.getElementById('tx-times').value; record.chemoFreq = document.getElementById('tx-freq').value; record.nextDate = document.getElementById('tx-nextdate').value; }
                 else if (typeKey === 'surgery') { record.surgName = document.getElementById('tx-surg-name').value; record.surgSite = document.getElementById('tx-surg-site').value; }
                 else if (typeKey === 'rt') { record.rtSite = document.getElementById('tx-rt-site').value; record.rtDose = document.getElementById('tx-rt-dose').value; record.rtProgress = document.getElementById('tx-rt-progress').value; }
                 else if (typeKey === 'other') { record.otherName = document.getElementById('tx-other-name').value; }
 
-                txRecords.push(record); txRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
+                txRecords.push(record); txRecords.sort(function (a, b) { return new Date(b.recordDate) - new Date(a.recordDate); });
                 saveDataToLocal(); renderTxSection(); updateHistoryPanel();
 
                 alert('💾 治療紀錄已成功儲存！');
-                const menuGrid = document.getElementById('main-menu-grid');
-                if (menuGrid) menuGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                var menuGrid = document.getElementById('main-menu-grid');
+                if (menuGrid) menuGrid.scrollIntoView();
             }
 
             function saveLabData() {
                 if (!validateDateGuard('lab-date')) return;
-                const labFields = ['input-weight', 'input-wbc', 'input-anc', 'input-hb', 'input-plt', 'input-got', 'input-gpt', 'input-bun', 'input-cr', 'input-ldh', 'input-alp', 'input-cea', 'input-ca153', 'input-ca125', 'input-ca199', 'input-afp', 'input-psa', 'input-cga', 'input-bhcg'];
+                var labFields = ['input-weight', 'input-wbc', 'input-anc', 'input-hb', 'input-plt', 'input-got', 'input-gpt', 'input-bun', 'input-cr', 'input-ldh', 'input-alp', 'input-cea', 'input-ca153', 'input-ca125', 'input-ca199', 'input-afp', 'input-psa', 'input-cga', 'input-bhcg'];
 
-                /* 降級相容寫法：替換 Array.prototype.some */
-                let hasValue = false;
-                for (let i = 0; i < labFields.length; i++) {
+                var hasValue = false;
+                for (var i = 0; i < labFields.length; i++) {
                     if (!checkEmpty(document.getElementById(labFields[i]).value)) {
                         hasValue = true;
                         break;
@@ -1253,60 +1261,59 @@
                 }
                 if (!hasValue) return alert("⚠️ 請至少填寫一項數值！");
 
-                let weightVal = document.getElementById('input-weight').value;
-                let dateVal = document.getElementById('lab-date').value || getTodayString();
+                var weightVal = document.getElementById('input-weight').value;
+                var dateVal = document.getElementById('lab-date').value || getTodayString();
                 if (weightVal) checkWeightLoss(weightVal, dateVal);
 
-                let newRecord = { recordDate: dateVal, weight: weightVal, wbc: document.getElementById('input-wbc').value, hb: document.getElementById('input-hb').value, cea: document.getElementById('input-cea').value, ca153: document.getElementById('input-ca153').value, anc: document.getElementById('input-anc').value, plt: document.getElementById('input-plt').value, got: document.getElementById('input-got').value, gpt: document.getElementById('input-gpt').value, bun: document.getElementById('input-bun').value, cr: document.getElementById('input-cr').value, ldh: document.getElementById('input-ldh').value, alp: document.getElementById('input-alp').value, ca125: document.getElementById('input-ca125').value, ca199: document.getElementById('input-ca199').value, afp: document.getElementById('input-afp').value, psa: document.getElementById('input-psa').value, bhcg: document.getElementById('input-bhcg').value, cga: document.getElementById('input-cga').value };
+                var newRecord = { recordDate: dateVal, weight: weightVal, wbc: document.getElementById('input-wbc').value, hb: document.getElementById('input-hb').value, cea: document.getElementById('input-cea').value, ca153: document.getElementById('input-ca153').value, anc: document.getElementById('input-anc').value, plt: document.getElementById('input-plt').value, got: document.getElementById('input-got').value, gpt: document.getElementById('input-gpt').value, bun: document.getElementById('input-bun').value, cr: document.getElementById('input-cr').value, ldh: document.getElementById('input-ldh').value, alp: document.getElementById('input-alp').value, ca125: document.getElementById('input-ca125').value, ca199: document.getElementById('input-ca199').value, afp: document.getElementById('input-afp').value, psa: document.getElementById('input-psa').value, bhcg: document.getElementById('input-bhcg').value, cga: document.getElementById('input-cga').value };
                 checkLabAlerts(newRecord); labRecords.push(newRecord);
-                labRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
+                labRecords.sort(function (a, b) { return new Date(b.recordDate) - new Date(a.recordDate); });
                 saveDataToLocal(); renderLabSection(); updateHistoryPanel();
 
                 alert('💾 抽血/體重紀錄已成功儲存！');
-                const menuGrid = document.getElementById('main-menu-grid');
-                if (menuGrid) menuGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                var menuGrid = document.getElementById('main-menu-grid');
+                if (menuGrid) menuGrid.scrollIntoView();
             }
 
             function saveExamData() {
                 if (!validateDateGuard('exam-date')) return;
-                let examTypeVal = document.getElementById('exam-type').value;
+                var examTypeVal = document.getElementById('exam-type').value;
                 if (examTypeVal === '其他') {
-                    let otherInput = document.getElementById('exam-type-other').value;
+                    var otherInput = document.getElementById('exam-type-other').value;
                     if (checkEmpty(otherInput)) return alert("⚠️ 請填寫檢查項目！");
                     examTypeVal = otherInput;
                 }
                 examRecords.push({ recordDate: document.getElementById('exam-date').value || getTodayString(), examType: examTypeVal, examResult: document.getElementById('exam-result').value });
-                examRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
+                examRecords.sort(function (a, b) { return new Date(b.recordDate) - new Date(a.recordDate); });
                 saveDataToLocal(); renderExamSection(); updateHistoryPanel();
 
                 alert('💾 檢查紀錄已成功儲存！');
-                const menuGrid = document.getElementById('main-menu-grid');
-                if (menuGrid) menuGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                var menuGrid = document.getElementById('main-menu-grid');
+                if (menuGrid) menuGrid.scrollIntoView();
             }
 
             function saveSeData() {
                 if (!validateDateGuard('se-date')) return;
-                let sev = document.getElementById('se-sev').value;
+                var sev = document.getElementById('se-sev').value;
                 if (sev === '嚴重 (需就醫)' && !confirm("🚨 確定要儲存「嚴重」症狀嗎？若情況緊急，請務必聯絡專線或直接就醫！")) return;
-                let sympVal = document.getElementById('se-symp').value;
+                var sympVal = document.getElementById('se-symp').value;
                 if (sympVal === '其他') {
-                    let otherInput = document.getElementById('se-symp-other').value;
+                    var otherInput = document.getElementById('se-symp-other').value;
                     if (checkEmpty(otherInput)) return alert("⚠️ 請填寫症狀！");
                     sympVal = otherInput;
                 }
                 seRecords.push({ recordDate: document.getElementById('se-date').value || getTodayString(), symp: sympVal, sev: sev, notes: document.getElementById('se-notes').value });
-                seRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
+                seRecords.sort(function (a, b) { return new Date(b.recordDate) - new Date(a.recordDate); });
                 saveDataToLocal(); renderSeSection(); updateHistoryPanel();
 
                 alert('💾 副作用紀錄已成功儲存！');
 
-                setTimeout(() => {
-                    const historySection = document.getElementById('side-history');
-                    if (historySection) { historySection.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                setTimeout(function () {
+                    var historySection = document.getElementById('side-history');
+                    if (historySection) { historySection.scrollIntoView(); }
                 }, 100);
             }
 
-            /* 修正模組封裝語法：將 ES6 Shorthand 改為 ES5 安全寫法，預防舊型瀏覽器解析出錯 */
             return {
                 init: init,
                 switchOncology: switchOncology,
