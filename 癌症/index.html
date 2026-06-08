@@ -851,16 +851,21 @@
             }
 
             function updateHistoryPanel() {
-                const allDates = new Set();
-                txRecords.forEach(r => allDates.add(r.recordDate));
-                labRecords.forEach(r => allDates.add(r.recordDate));
-                examRecords.forEach(r => allDates.add(r.recordDate));
-                seRecords.forEach(r => allDates.add(r.recordDate));
+                /* 降級 ES6 Set() 與 Array.from() 確保 LINE 舊版核心不會崩潰 */
+                const dateMap = {};
+                txRecords.forEach(r => { if (r.recordDate) dateMap[r.recordDate] = true; });
+                labRecords.forEach(r => { if (r.recordDate) dateMap[r.recordDate] = true; });
+                examRecords.forEach(r => { if (r.recordDate) dateMap[r.recordDate] = true; });
+                seRecords.forEach(r => { if (r.recordDate) dateMap[r.recordDate] = true; });
 
                 const listDiv = document.getElementById('side-history-list');
-                if (allDates.size === 0) { listDiv.innerHTML = '<p style="color:#64748b; font-size:0.95rem;">尚無歷史紀錄。</p>'; return; }
+                const dates = Object.keys(dateMap);
+                if (dates.length === 0) {
+                    listDiv.innerHTML = '<p style="color:#64748b; font-size:0.95rem;">尚無歷史紀錄。</p>';
+                    return;
+                }
 
-                const sortedDates = Array.from(allDates).sort((a, b) => new Date(b) - new Date(a));
+                const sortedDates = dates.sort((a, b) => new Date(b) - new Date(a));
                 listDiv.innerHTML = sortedDates.map(date => `<button class="action-btn" style="background:#e0f2fe; color:#0369a1; padding: 1rem; font-size: 1.1rem;" onclick="CareApp.showDailyReport('${date}')">📅 ${date} 健康總表</button>`).join('');
             }
 
@@ -953,23 +958,16 @@
             }
 
             function loadData() {
-                idCardState = JSON.parse(localStorage.getItem('7c_idCardState')) || {};
-                txRecords = JSON.parse(localStorage.getItem('7c_txRecords')) || [];
-                labRecords = JSON.parse(localStorage.getItem('7c_labRecords')) || [];
-                examRecords = JSON.parse(localStorage.getItem('7c_examRecords')) || [];
-                seRecords = JSON.parse(localStorage.getItem('7c_seRecords')) || [];
+                /* 加上 try catch 確保老舊瀏覽器解析 JSON 失敗時不會導致整支 JS 卡死 */
+                try { idCardState = JSON.parse(localStorage.getItem('7c_idCardState')) || {}; } catch (e) { idCardState = {}; }
+                try { txRecords = JSON.parse(localStorage.getItem('7c_txRecords')) || []; } catch (e) { txRecords = []; }
+                try { labRecords = JSON.parse(localStorage.getItem('7c_labRecords')) || []; } catch (e) { labRecords = []; }
+                try { examRecords = JSON.parse(localStorage.getItem('7c_examRecords')) || []; } catch (e) { examRecords = []; }
+                try { seRecords = JSON.parse(localStorage.getItem('7c_seRecords')) || []; } catch (e) { seRecords = []; }
 
                 if (idCardState.lockedOncology) {
                     currentOncology = idCardState.lockedOncology;
                 }
-            }
-
-            function saveDataToLocal() {
-                localStorage.setItem('7c_idCardState', JSON.stringify(idCardState));
-                localStorage.setItem('7c_txRecords', JSON.stringify(txRecords));
-                localStorage.setItem('7c_labRecords', JSON.stringify(labRecords));
-                localStorage.setItem('7c_examRecords', JSON.stringify(examRecords));
-                localStorage.setItem('7c_seRecords', JSON.stringify(seRecords));
             }
 
             function init() {
@@ -995,9 +993,13 @@
                     if (typeSelect) {
                         let oldVal = typeSelect.value;
                         typeSelect.innerHTML = `<option value="">請選擇...</option>` + getCellTypeOptions();
-                        if (Array.from(typeSelect.options).some(opt => opt.value === oldVal)) {
-                            typeSelect.value = oldVal;
+
+                        /* 降級相容寫法：替換 Array.prototype.some */
+                        let optionExists = false;
+                        for (let i = 0; i < typeSelect.options.length; i++) {
+                            if (typeSelect.options[i].value === oldVal) optionExists = true;
                         }
+                        if (optionExists) { typeSelect.value = oldVal; }
                     }
 
                     if (!fromIDCard) {
@@ -1017,7 +1019,9 @@
             function switchSection(section) {
                 currentSection = section;
                 document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById(`menu-${section}`).classList.add('active');
+
+                let targetMenuBtn = document.getElementById(`menu-${section}`);
+                if (targetMenuBtn) targetMenuBtn.classList.add('active');
 
                 if (section === 'report') renderReportSection();
                 if (section === 'tx') renderTxSection();
@@ -1035,8 +1039,10 @@
                 if (currentOncology === 'colorectal') defaultSite = '大腸癌';
 
                 const siteRawVal = idCardState.siteRaw || defaultSite;
-                const isStandardSite = ['乳癌', '肺癌', '大腸癌', ''].includes(siteRawVal);
-                const isStandardMeta = ['骨骼', '腦部', '肝臟', '肺部', '腹膜', ''].includes(idCardState.metaSiteRaw || '');
+
+                /* 修復致命錯誤：將 ES6 的 .includes() 降級為 .indexOf() !== -1，確保 LINE 內建瀏覽器完全相容不卡死 */
+                const isStandardSite = ['乳癌', '肺癌', '大腸癌', ''].indexOf(siteRawVal) !== -1;
+                const isStandardMeta = ['骨骼', '腦部', '肝臟', '肺部', '腹膜', ''].indexOf(idCardState.metaSiteRaw || '') !== -1;
                 const isLocked = !!idCardState.lockedOncology;
 
                 content.innerHTML = `
@@ -1170,11 +1176,9 @@
                 saveDataToLocal();
                 checkLockedOncology();
 
-                // 🌟 優化體驗：先重新繪製畫面（加上鎖定外觀），並且滾動到最上方
                 renderReportSection();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                // 🌟 延遲 600 毫秒：讓瀏覽器有時間把「鎖定反灰」的畫面確實畫出來給病人看，然後再用 confirm 引導
                 setTimeout(() => {
                     let goNext = confirm('💾 身分證資料已完整儲存！\n您的專屬癌別狀態已成功鎖定（如背景畫面所示）。\n\n👉 點選「確定」將接著帶您前往填寫「治療紀錄」。');
                     if (goNext) {
@@ -1238,7 +1242,17 @@
             function saveLabData() {
                 if (!validateDateGuard('lab-date')) return;
                 const labFields = ['input-weight', 'input-wbc', 'input-anc', 'input-hb', 'input-plt', 'input-got', 'input-gpt', 'input-bun', 'input-cr', 'input-ldh', 'input-alp', 'input-cea', 'input-ca153', 'input-ca125', 'input-ca199', 'input-afp', 'input-psa', 'input-cga', 'input-bhcg'];
-                if (!labFields.some(id => !checkEmpty(document.getElementById(id).value))) return alert("⚠️ 請至少填寫一項數值！");
+
+                /* 降級相容寫法：替換 Array.prototype.some */
+                let hasValue = false;
+                for (let i = 0; i < labFields.length; i++) {
+                    if (!checkEmpty(document.getElementById(labFields[i]).value)) {
+                        hasValue = true;
+                        break;
+                    }
+                }
+                if (!hasValue) return alert("⚠️ 請至少填寫一項數值！");
+
                 let weightVal = document.getElementById('input-weight').value;
                 let dateVal = document.getElementById('lab-date').value || getTodayString();
                 if (weightVal) checkWeightLoss(weightVal, dateVal);
@@ -1292,8 +1306,24 @@
                 }, 100);
             }
 
+            /* 修正模組封裝語法：將 ES6 Shorthand 改為 ES5 安全寫法，預防舊型瀏覽器解析出錯 */
             return {
-                init, switchOncology, updateReminder, switchSection, toggleTxFields, handleSiteChange, saveIdCard, deleteIdCard, saveTxData, saveLabData, saveExamData, saveSeData, deleteRecord, showDailyReport, closeModal, prepareAndPrint
+                init: init,
+                switchOncology: switchOncology,
+                updateReminder: updateReminder,
+                switchSection: switchSection,
+                toggleTxFields: toggleTxFields,
+                handleSiteChange: handleSiteChange,
+                saveIdCard: saveIdCard,
+                deleteIdCard: deleteIdCard,
+                saveTxData: saveTxData,
+                saveLabData: saveLabData,
+                saveExamData: saveExamData,
+                saveSeData: saveSeData,
+                deleteRecord: deleteRecord,
+                showDailyReport: showDailyReport,
+                closeModal: closeModal,
+                prepareAndPrint: prepareAndPrint
             };
         })();
 
