@@ -483,6 +483,7 @@
             font-size: 1.15rem;
             text-decoration: none;
             margin-bottom: 0.8rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         /* 歷史紀錄卡片 */
@@ -652,7 +653,6 @@
                 margin-bottom: 10px;
             }
 
-            /* 列印用表格，設定欄位較緊湊 */
             .print-table {
                 width: 100%;
                 border-collapse: collapse;
@@ -762,7 +762,6 @@
 
         <div class="content-stream" id="mainContent"></div>
 
-        <!-- 加入了 ID 方便滾動跳轉 -->
         <div class="bottom-area" id="export-area">
             <div class="summary-panel" id="side-history">
                 <h3>📂 歷史健康總表 (點擊查看)</h3>
@@ -799,7 +798,7 @@
             let currentOncology = 'breast';
             let currentSection = 'report';
 
-            // 抽血數值與腫瘤指數正常範圍 (加入腫瘤指數上限標準)
+            // 抽血數值與腫瘤指數正常範圍 
             const CLINICAL_LAB_LIMITS = {
                 wbc: { name: 'WBC 白血球', min: 3.54, max: 9.06, panicMin: 1.0, panicMax: 50.0 },
                 anc: { name: 'ANC 嗜中性球', min: 1500, max: null, panicMin: 500, panicMax: null },
@@ -809,17 +808,16 @@
                 gpt: { name: 'SGPT 肝功能', min: 0, max: 41, panicMin: null, panicMax: 200 },
                 bun: { name: 'BUN 腎功能', min: 7, max: 20, panicMin: null, panicMax: 100 },
                 cr: { name: 'Cr 腎功能', min: 0.6, max: 1.3, panicMin: null, panicMax: 3.0 },
-                // 腫瘤指數 (依照常見抗癌監測值，沒有上限危險值則為 null)
-                cea: { name: 'CEA', min: 0, max: 5.0, panicMin: null, panicMax: null },
-                ca153: { name: 'CA15-3', min: 0, max: 31.3, panicMin: null, panicMax: null },
-                ca125: { name: 'CA-125', min: 0, max: 35.0, panicMin: null, panicMax: null },
-                ca199: { name: 'CA19-9', min: 0, max: 37.0, panicMin: null, panicMax: null },
+                cea: { name: 'CEA', min: null, max: 5.0, panicMin: null, panicMax: null },
+                ca153: { name: 'CA15-3', min: null, max: 31.3, panicMin: null, panicMax: null },
+                ca125: { name: 'CA-125', min: null, max: 35.0, panicMin: null, panicMax: null },
+                ca199: { name: 'CA19-9', min: null, max: 37.0, panicMin: null, panicMax: null },
                 ldh: { name: 'LDH', min: 119, max: 229, panicMin: null, panicMax: null },
                 alp: { name: 'ALP', min: 35, max: 104, panicMin: null, panicMax: null },
-                afp: { name: 'AFP', min: 0, max: 7.0, panicMin: null, panicMax: null },
-                psa: { name: 'PSA', min: 0, max: 4.0, panicMin: null, panicMax: null },
-                cga: { name: 'CgA', min: 0, max: 100.0, panicMin: null, panicMax: null },
-                bhcg: { name: 'bHCG', min: 0, max: 5.0, panicMin: null, panicMax: null }
+                afp: { name: 'AFP', min: null, max: 7.0, panicMin: null, panicMax: null },
+                psa: { name: 'PSA', min: null, max: 4.0, panicMin: null, panicMax: null },
+                cga: { name: 'CgA', min: null, max: 100.0, panicMin: null, panicMax: null },
+                bhcg: { name: 'bHCG', min: null, max: 5.0, panicMin: null, panicMax: null }
             };
 
             const reminderDB = {
@@ -837,11 +835,23 @@
             function checkEmpty(val) { return val === null || val === undefined || String(val).trim() === ''; }
             function getTodayString() { const today = new Date(); return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; }
 
-            // 檢查是否輸入負數的共用防呆函式
+            // 檢查是否輸入負數
             function checkNegativeInput(elementId) {
                 const el = document.getElementById(elementId);
                 if (el && el.value !== '' && parseFloat(el.value) < 0) return true;
                 return false;
+            }
+
+            // 格式化數值 (列印總表時，標示紅藍箭頭)
+            function formatLabValue(key, val) {
+                if (!val || val === '-') return '-';
+                let v = parseFloat(val);
+                let cfg = CLINICAL_LAB_LIMITS[key];
+                if (!cfg) return val;
+
+                if (cfg.max !== null && v > cfg.max) return `${val} <span style="color:#dc2626; font-weight:bold;">▲</span>`;
+                if (cfg.min !== null && v < cfg.min) return `${val} <span style="color:#2563eb; font-weight:bold;">▼</span>`;
+                return val;
             }
 
             function validateDateGuard(inputId) {
@@ -936,7 +946,6 @@
                 let lossPercent = ((prevW - currentW) / prevW) * 100;
                 let daysDiff = (new Date(newDateStr) - new Date(lastValidRecord.recordDate)) / (1000 * 60 * 60 * 24);
 
-                // 警示邏輯
                 if (daysDiff > 0) {
                     if (daysDiff <= 7 && lossPercent >= 2.0) alert(`⚖️【體重快速流失警訊】\n一週內減輕 ${lossPercent.toFixed(1)}%！請主動尋求營養師諮詢。`);
                     else if (daysDiff <= 30 && lossPercent >= 5.0) alert(`⚖️【體重流失警訊】\n一個月內減輕 ${lossPercent.toFixed(1)}%！建議尋求營養師諮詢。`);
@@ -1104,9 +1113,7 @@
             }
 
             function renderTxSection() {
-                // 根據癌別設定智慧提示 Placeholder
-                let surgNamePh = "例如: 腫瘤切除術";
-                let surgSitePh = "例如: 手術部位";
+                let surgNamePh = "例如: 腫瘤切除術", surgSitePh = "例如: 手術部位";
                 if (currentOncology === 'breast') { surgNamePh = "例如: 右側乳房改良切除術"; surgSitePh = "例如: 右側乳房"; }
                 else if (currentOncology === 'lung') { surgNamePh = "例如: 肺葉切除術"; surgSitePh = "例如: 右上肺葉"; }
                 else if (currentOncology === 'colorectal') { surgNamePh = "例如: 大腸切除術"; surgSitePh = "例如: 右側升結腸"; }
@@ -1123,9 +1130,15 @@
                         <div id="tx-chemo-group">
                             <div class="grid-2">
                                 <div class="form-row"><label>第幾次</label><input type="number" id="tx-times" class="form-input" inputmode="numeric" min="0" placeholder=">0"></div>
-                                <div class="form-row"><label>頻率(週)</label><input type="number" id="tx-freq" class="form-input" inputmode="numeric" min="0" placeholder=">0"></div>
+                                <div class="form-row"><label>下次預定</label><input type="date" id="tx-nextdate" class="form-input"></div>
                             </div>
-                            <div class="form-row"><label>下次預定日期</label><input type="date" id="tx-nextdate" class="form-input"></div>
+                            <div class="form-row">
+                                <label>頻率</label>
+                                <div style="display:flex; gap:0.5rem;">
+                                    <select id="tx-freq-type" class="form-select" style="flex:1; padding:0.5rem;"><option value="perWeek">每週 _ 次</option><option value="perWeeks">每 _ 週一次</option></select>
+                                    <input type="number" id="tx-freq-num" class="form-input" inputmode="numeric" min="0" style="flex:1; padding:0.5rem;" placeholder="填數字">
+                                </div>
+                            </div>
                         </div>
                         <div id="tx-surg-group" style="display:none;">
                             <div class="form-row"><label>手術名稱</label><input type="text" id="tx-surg-name" class="form-input" placeholder="${surgNamePh}"></div>
@@ -1136,6 +1149,13 @@
                             <div class="grid-2">
                                 <div class="form-row"><label>總劑量</label><input type="number" id="tx-rt-dose" class="form-input" inputmode="decimal" min="0" placeholder=">0"></div>
                                 <div class="form-row"><label>進度(次)</label><input type="text" id="tx-rt-progress" class="form-input" placeholder="例: 5/25"></div>
+                            </div>
+                            <div class="form-row" style="margin-top:1rem;">
+                                <label>頻率</label>
+                                <div style="display:flex; gap:0.5rem;">
+                                    <select id="tx-rt-freq-type" class="form-select" style="flex:1; padding:0.5rem;"><option value="perWeek" selected>每週 _ 次</option><option value="perWeeks">每 _ 週一次</option></select>
+                                    <input type="number" id="tx-rt-freq-num" class="form-input" inputmode="numeric" min="0" style="flex:1; padding:0.5rem;" placeholder="填數字">
+                                </div>
                             </div>
                         </div>
                         <div id="tx-other-group" style="display:none;">
@@ -1148,10 +1168,17 @@
                 txRecords.forEach((r, i) => {
                     html += `<div class="history-card"><button class="btn-delete" onclick="CareApp.deleteRecord('tx', ${i})">刪除</button>
                     <div class="history-date">${r.recordDate} - ${r.displayType}</div><div class="history-data">`;
-                    if (r.typeKey === 'chemo') html += `第 ${r.chemoTimes} 次 (每 ${r.chemoFreq} 週)<br>下次預定: ${r.nextDate}`;
-                    if (r.typeKey === 'surgery') html += `手術: ${r.surgName}<br>部位: ${r.surgSite}`;
-                    if (r.typeKey === 'rt') html += `部位: ${r.rtSite}<br>劑量: ${r.rtDose} / 進度: ${r.rtProgress}`;
-                    if (r.typeKey === 'other') html += `名稱: ${r.otherName}`;
+
+                    if (r.typeKey === 'chemo') {
+                        let fStr = r.chemoFreqDisplay || (r.chemoFreq ? `每 ${r.chemoFreq} 週` : '-');
+                        html += `第 ${r.chemoTimes} 次 (${fStr})<br>下次預定: ${r.nextDate}`;
+                    } else if (r.typeKey === 'surgery') {
+                        html += `手術: ${r.surgName}<br>部位: ${r.surgSite}`;
+                    } else if (r.typeKey === 'rt') {
+                        html += `部位: ${r.rtSite} / 總劑量: ${r.rtDose} <br>進度: ${r.rtProgress} (${r.rtFreqDisplay || '-'})`;
+                    } else if (r.typeKey === 'other') {
+                        html += `名稱: ${r.otherName}`;
+                    }
                     if (r.notes) html += `<br><span style="color:#64748b;">備註: ${r.notes}</span>`;
                     html += `</div></div>`;
                 });
@@ -1221,10 +1248,7 @@
                         </div>
                         <div class="form-row"><label>報告結果</label>
                             <select class="form-select" id="exam-status">
-                                <option value="正常">正常</option>
-                                <option value="異常">異常</option>
-                                <option value="穩定">穩定</option>
-                                <option value="增大">增大</option>
+                                <option value="正常">正常</option><option value="異常">異常</option><option value="穩定">穩定</option><option value="增大">增大</option>
                             </select>
                         </div>
                         <div class="form-row"><label>醫師交代事項/備註</label><input type="text" id="exam-result-notes" class="form-input" placeholder="可選填..."></div>
@@ -1269,12 +1293,27 @@
             }
 
             function renderLinksSection() {
+                const cancer = idCardState.siteRaw || '尚未設定癌別';
+                const stage = idCardState.stage || '尚未設定期別';
+
+                let eduContent = `
+                    <div class="modal-section" style="background:#f0f9ff; border:1px solid #bae6fd;">
+                        <h4>📖 專屬衛教資訊</h4>
+                        <p style="font-size:1rem; color:#0369a1; margin-bottom:0.8rem;">目前選擇：<strong>${cancer}</strong> | <strong>${stage}</strong></p>
+                        <a href="https://www.canceraway.org.tw/doclist.php?keyid=294" target="_blank" class="btn-link" style="background:#0ea5e9;">台灣癌症基金會 (各癌別與期別資訊)</a>
+                        <a href="https://afcr.org/zh/" target="_blank" class="btn-link" style="background:#0891b2;">亞洲癌症研究基金會</a>
+                        <a href="https://afcr.org/zh/" target="_blank" class="btn-link" style="background:#0369a1;">中華民國癌友新生命協會</a>
+                    </div>
+                `;
+
                 document.getElementById('mainContent').innerHTML = `
                     <div class="info-panel">
                         <div class="info-title">🔗 常用衛教與支援資源</div>
-                        <a href="https://ttms.mmh.org.tw/" target="_blank" class="btn-link">🏥 台東馬偕紀念醫院官網</a>
-                        <a href="https://www.hope.org.tw/" target="_blank" class="btn-link" style="background:#10b981;">🌻 癌症希望基金會</a>
-                        <a href="#" class="btn-link" style="background:#f59e0b;" onclick="alert('請於週一至週五上班時間撥打：\\n(089) 310150 轉 7C 護理站')">📞 7C 護理站諮詢專線</a>
+                        ${eduContent}
+                        <hr style="margin:1rem 0; border:0; border-top:1px solid #e2e8f0;">
+                        <a href="https://ttw3.mmh.org.tw/" target="_blank" class="btn-link">🏥 台東馬偕紀念醫院官網</a>
+                        <a href="https://podcasts.apple.com/tw/podcast/hope-podcast/id1610667681" target="_blank" class="btn-link" style="background:#a855f7;">🎧 希望基金會 Podcast</a>
+                        <a href="#" class="btn-link" style="background:#f59e0b;" onclick="alert('請於週一至週五上班時間撥打：\\n(089) 310150 轉分機 7301 或 7302')">📞 7C護理站諮詢 (089) 310150 轉 7301/7302</a>
                     </div>`;
             }
 
@@ -1330,22 +1369,34 @@
 
             function saveTxData() {
                 if (!validateDateGuard('tx-date')) return;
-                if (checkNegativeInput('tx-times') || checkNegativeInput('tx-freq') || checkNegativeInput('tx-rt-dose')) {
+                if (checkNegativeInput('tx-times') || checkNegativeInput('tx-freq-num') || checkNegativeInput('tx-rt-dose') || checkNegativeInput('tx-rt-freq-num')) {
                     return alert("⚠️ 數值不可為負數，請重新確認！");
                 }
 
                 const typeKey = document.getElementById('tx-type').value, sel = document.getElementById('tx-type');
                 const displayType = sel.options[sel.selectedIndex].text;
-                if (typeKey === 'chemo' && (checkEmpty(document.getElementById('tx-times').value) || checkEmpty(document.getElementById('tx-freq').value))) return alert("⚠️ 請完整填寫資訊！");
-                if (typeKey === 'surgery' && (checkEmpty(document.getElementById('tx-surg-name').value) || checkEmpty(document.getElementById('tx-surg-site').value))) return alert("⚠️ 請填寫手術資訊！");
-                if (typeKey === 'rt' && (checkEmpty(document.getElementById('tx-rt-site').value) || checkEmpty(document.getElementById('tx-rt-dose').value))) return alert("⚠️ 請填寫放療資訊！");
-                if (typeKey === 'other' && checkEmpty(document.getElementById('tx-other-name').value)) return alert("⚠️ 請輸入名稱！");
-
                 let record = { recordDate: document.getElementById('tx-date').value || getTodayString(), typeKey, displayType, notes: document.getElementById('tx-notes').value };
-                if (typeKey === 'chemo') { record.chemoTimes = document.getElementById('tx-times').value; record.chemoFreq = document.getElementById('tx-freq').value; record.nextDate = document.getElementById('tx-nextdate').value; }
-                else if (typeKey === 'surgery') { record.surgName = document.getElementById('tx-surg-name').value; record.surgSite = document.getElementById('tx-surg-site').value; }
-                else if (typeKey === 'rt') { record.rtSite = document.getElementById('tx-rt-site').value; record.rtDose = document.getElementById('tx-rt-dose').value; record.rtProgress = document.getElementById('tx-rt-progress').value; }
-                else if (typeKey === 'other') record.otherName = document.getElementById('tx-other-name').value;
+
+                if (typeKey === 'chemo') {
+                    let fType = document.getElementById('tx-freq-type').value, fNum = document.getElementById('tx-freq-num').value;
+                    if (checkEmpty(document.getElementById('tx-times').value) || checkEmpty(fNum)) return alert("⚠️ 請完整填寫化學/標靶的頻率與次數！");
+                    record.chemoTimes = document.getElementById('tx-times').value;
+                    record.chemoFreqDisplay = (fType === 'perWeek') ? `每週 ${fNum} 次` : `每 ${fNum} 週一次`;
+                    record.nextDate = document.getElementById('tx-nextdate').value;
+                } else if (typeKey === 'surgery') {
+                    if (checkEmpty(document.getElementById('tx-surg-name').value) || checkEmpty(document.getElementById('tx-surg-site').value)) return alert("⚠️ 請填寫手術資訊！");
+                    record.surgName = document.getElementById('tx-surg-name').value; record.surgSite = document.getElementById('tx-surg-site').value;
+                } else if (typeKey === 'rt') {
+                    let rtFType = document.getElementById('tx-rt-freq-type').value, rtFNum = document.getElementById('tx-rt-freq-num').value;
+                    if (checkEmpty(document.getElementById('tx-rt-site').value) || checkEmpty(document.getElementById('tx-rt-dose').value) || checkEmpty(rtFNum)) return alert("⚠️ 請填寫放療資訊與頻率！");
+                    record.rtSite = document.getElementById('tx-rt-site').value;
+                    record.rtDose = document.getElementById('tx-rt-dose').value;
+                    record.rtProgress = document.getElementById('tx-rt-progress').value;
+                    record.rtFreqDisplay = (rtFType === 'perWeek') ? `每週 ${rtFNum} 次` : `每 ${rtFNum} 週一次`;
+                } else if (typeKey === 'other') {
+                    if (checkEmpty(document.getElementById('tx-other-name').value)) return alert("⚠️ 請輸入名稱！");
+                    record.otherName = document.getElementById('tx-other-name').value;
+                }
 
                 txRecords.push(record); txRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 saveDataToLocal(); updateHistoryPanel();
@@ -1356,10 +1407,8 @@
             function saveLabData() {
                 if (!validateDateGuard('lab-date')) return;
 
-                // 檢查是否為負數
                 const allNumberFields = ['input-weight', 'input-wbc', 'input-anc', 'input-hb', 'input-plt', 'input-got', 'input-gpt', 'input-bun', 'input-cr', 'input-cea', 'input-ca153', 'input-ca125', 'input-ca199', 'input-ldh', 'input-alp', 'input-afp', 'input-psa', 'input-cga', 'input-bhcg'];
-                let hasNegative = false;
-                let hasValue = false;
+                let hasNegative = false; let hasValue = false;
 
                 allNumberFields.forEach(id => {
                     const el = document.getElementById(id);
@@ -1423,7 +1472,6 @@
                 seRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 saveDataToLocal(); updateHistoryPanel();
 
-                // 跳出完成提示，並自動平滑滾動到頁面底部的匯出總表區塊
                 alert("💾 【儲存成功】副作用紀錄已完整記錄！\n✅ 今日所有紀錄已完成填寫，將為您跳轉至「匯出總表」區塊。");
                 renderSeSection();
                 document.getElementById('export-area').scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -1464,14 +1512,16 @@
                 } else { html += `<p>尚未填寫身分證資料</p>`; }
                 html += `</div>`;
 
-                // 2. 治療紀錄 (顯示完整細節)
+                // 2. 治療紀錄 (顯示頻率細節)
                 if (txRecords.length) {
                     html += `<div class="print-section"><div class="print-section-title">🩺 治療紀錄</div><table class="print-table"><tr><th>日期</th><th>種類</th><th>詳細內容</th><th>備註</th></tr>`;
                     txRecords.forEach(r => {
                         let details = '';
-                        if (r.typeKey === 'chemo') details = `第${r.chemoTimes}次(每${r.chemoFreq}週), 下次:${r.nextDate}`;
-                        else if (r.typeKey === 'surgery') details = `手術:${r.surgName}, 部位:${r.surgSite}`;
-                        else if (r.typeKey === 'rt') details = `部位:${r.rtSite}, 總劑量:${r.rtDose}, 進度:${r.rtProgress}`;
+                        if (r.typeKey === 'chemo') {
+                            let fStr = r.chemoFreqDisplay || (r.chemoFreq ? `每 ${r.chemoFreq} 週` : '-');
+                            details = `第 ${r.chemoTimes} 次 (${fStr}), 下次預定:${r.nextDate || '-'}`;
+                        } else if (r.typeKey === 'surgery') details = `手術:${r.surgName}, 部位:${r.surgSite}`;
+                        else if (r.typeKey === 'rt') details = `部位:${r.rtSite}, 總劑量:${r.rtDose}, 進度:${r.rtProgress} (${r.rtFreqDisplay || '-'})`;
                         else if (r.typeKey === 'other') details = `名稱:${r.otherName}`;
 
                         html += `<tr><td>${r.recordDate}</td><td>${r.displayType}</td><td>${details}</td><td>${r.notes || '-'}</td></tr>`;
@@ -1479,14 +1529,12 @@
                     html += `</table></div>`;
                 }
 
-                // 3. 抽血與體重完整紀錄 (列轉欄排列，趨勢圖呈現)
+                // 3. 抽血與體重完整紀錄 (動態紅藍箭頭 + 趨勢圖呈現)
                 if (labRecords.length) {
-                    // 將記錄依據日期由舊到新排序 (符合趨勢圖由左至右閱讀習慣)
                     let sortedLabs = [...labRecords].sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate));
-
                     html += `<div class="print-section"><div class="print-section-title">🩸 抽血與腫瘤指數趨勢表</div><table class="print-table">`;
 
-                    // 日期標題列
+                    // 日期列
                     html += `<tr><th>項目 \\ 日期</th>`;
                     sortedLabs.forEach(r => html += `<th>${r.recordDate}</th>`);
                     html += `</tr>`;
@@ -1496,19 +1544,20 @@
                     sortedLabs.forEach(r => html += `<td>${r.weight || '-'}${r.weightLossMsg ? `<br><span style="color:#dc2626;font-size:10px;">(${r.weightLossMsg})</span>` : ''}</td>`);
                     html += `</tr>`;
 
-                    // 檢查其他血液與腫瘤項目，只有當有人填寫過該項目才印出該列
+                    // 血液與腫瘤指數列 (自動計算紅藍箭頭)
                     const labKeys = ['wbc', 'anc', 'hb', 'plt', 'got', 'gpt', 'bun', 'cr', 'cea', 'ca153', 'ca125', 'ca199', 'ldh', 'alp', 'afp', 'psa', 'cga', 'bhcg'];
                     labKeys.forEach(k => {
                         let hasData = sortedLabs.some(r => r[k]);
                         if (hasData) {
                             let cfg = CLINICAL_LAB_LIMITS[k];
-                            let hint = cfg.max ? `(${cfg.min}~${cfg.max})` : (cfg.min ? `(>${cfg.min})` : '');
+                            let hint = cfg.max ? `(${cfg.min || '0'}~${cfg.max})` : (cfg.min ? `(>${cfg.min})` : '');
                             html += `<tr><th>${cfg.name}<br><span style="font-size:10px;font-weight:normal;">${hint}</span></th>`;
-                            sortedLabs.forEach(r => html += `<td>${r[k] || '-'}</td>`);
+                            sortedLabs.forEach(r => {
+                                html += `<td>${formatLabValue(k, r[k])}</td>`;
+                            });
                             html += `</tr>`;
                         }
                     });
-
                     html += `</table></div>`;
                 }
 
