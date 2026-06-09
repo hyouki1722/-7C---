@@ -800,14 +800,14 @@
 
             // 抽血數值與腫瘤指數正常範圍 
             const CLINICAL_LAB_LIMITS = {
-                wbc: { name: 'WBC 白血球', min: 3.54, max: 9.06, panicMin: 1.0, panicMax: 50.0 },
-                anc: { name: 'ANC 嗜中性球', min: 1500, max: null, panicMin: 500, panicMax: null },
-                hb: { name: 'Hb 血色素', min: 10.8, max: 17.2, panicMin: 7.0, panicMax: 20.0 },
-                plt: { name: 'Platelet 血小板', min: 148, max: 361, panicMin: 50, panicMax: 1000 },
-                got: { name: 'SGOT 肝功能', min: 8, max: 37, panicMin: null, panicMax: 200 },
-                gpt: { name: 'SGPT 肝功能', min: 0, max: 41, panicMin: null, panicMax: 200 },
-                bun: { name: 'BUN 腎功能', min: 7, max: 20, panicMin: null, panicMax: 100 },
-                cr: { name: 'Cr 腎功能', min: 0.6, max: 1.3, panicMin: null, panicMax: 3.0 },
+                wbc: { name: '白血球 (WBC)', min: 3.54, max: 9.06, panicMin: 1.0, panicMax: 50.0 },
+                anc: { name: '嗜中性球 (ANC)', min: 1500, max: null, panicMin: 500, panicMax: null },
+                hb: { name: '血色素 (Hb)', min: 10.8, max: 17.2, panicMin: 7.0, panicMax: 20.0 },
+                plt: { name: '血小板 (Platelet)', min: 148, max: 361, panicMin: 50, panicMax: 1000 },
+                got: { name: '肝功能 (GOT)', min: 8, max: 37, panicMin: null, panicMax: 200 },
+                gpt: { name: '肝功能 (GPT)', min: 0, max: 41, panicMin: null, panicMax: 200 },
+                bun: { name: '腎功能 (BUN)', min: 7, max: 20, panicMin: null, panicMax: 100 },
+                cr: { name: '腎功能 (Cr)', min: 0.6, max: 1.3, panicMin: null, panicMax: 3.0 },
                 cea: { name: 'CEA', min: null, max: 5.0, panicMin: null, panicMax: null },
                 ca153: { name: 'CA15-3', min: null, max: 31.3, panicMin: null, panicMax: null },
                 ca125: { name: 'CA-125', min: null, max: 35.0, panicMin: null, panicMax: null },
@@ -930,44 +930,68 @@
                 else if (site === '大腸癌') switchOncology('colorectal', true);
             }
 
-            // 計算體重流失百分比公式
+            // 【優化】精準計算體重變化：只與「輸入日期」之前的「最靠近一筆」紀錄做比較
             function calculateWeightLoss(newWeight, newDateStr) {
                 if (!newWeight || labRecords.length === 0) return null;
-                let lastValidRecord = null;
-                for (let i = 0; i < labRecords.length; i++) {
-                    if (labRecords[i].weight && !isNaN(parseFloat(labRecords[i].weight)) && labRecords[i].recordDate !== newDateStr) {
-                        lastValidRecord = labRecords[i]; break;
-                    }
-                }
-                if (!lastValidRecord) return null;
-                let prevW = parseFloat(lastValidRecord.weight), currentW = parseFloat(newWeight);
-                if (isNaN(prevW) || isNaN(currentW) || prevW === 0) return null;
+                let currentW = parseFloat(newWeight);
+                if (isNaN(currentW) || currentW <= 0) return null;
+
+                let targetDate = new Date(newDateStr);
+
+                // 篩選出日期早於當前輸入日的有效體重紀錄
+                let pastRecords = labRecords.filter(r => {
+                    if (!r.weight || isNaN(parseFloat(r.weight))) return false;
+                    let rDate = new Date(r.recordDate);
+                    return rDate < targetDate;
+                });
+
+                if (pastRecords.length === 0) return null;
+
+                // 排序，取得最接近的一筆歷史紀錄
+                pastRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
+                let lastValidRecord = pastRecords[0];
+
+                let prevW = parseFloat(lastValidRecord.weight);
+                if (isNaN(prevW) || prevW === 0) return null;
 
                 let lossPercent = ((prevW - currentW) / prevW) * 100;
-                let daysDiff = (new Date(newDateStr) - new Date(lastValidRecord.recordDate)) / (1000 * 60 * 60 * 24);
+                let daysDiff = (targetDate - new Date(lastValidRecord.recordDate)) / (1000 * 60 * 60 * 24);
 
-                if (daysDiff > 0) {
-                    if (daysDiff <= 7 && lossPercent >= 2.0) alert(`⚖️【體重快速流失警訊】\n一週內減輕 ${lossPercent.toFixed(1)}%！請主動尋求營養師諮詢。`);
-                    else if (daysDiff <= 30 && lossPercent >= 5.0) alert(`⚖️【體重流失警訊】\n一個月內減輕 ${lossPercent.toFixed(1)}%！建議尋求營養師諮詢。`);
-                    else if (lossPercent >= 5.0) alert(`⚖️【體重流失警訊】\n本次減輕 ${lossPercent.toFixed(1)}%！請調整飲食。`);
+                // 只針對體重減輕(lossPercent > 0)發出警示
+                if (daysDiff > 0 && lossPercent > 0) {
+                    if (daysDiff <= 7 && lossPercent >= 2.0) {
+                        alert(`⚖️【體重快速流失警訊】\n您在 ${daysDiff} 天內體重減輕了 ${lossPercent.toFixed(1)}%！\n建議主動尋求營養師諮詢，補充高蛋白營養。`);
+                    } else if (daysDiff <= 30 && lossPercent >= 5.0) {
+                        alert(`⚖️【體重流失警訊】\n您在 ${daysDiff} 天內體重減輕了 ${lossPercent.toFixed(1)}%！\n請留意近期營養狀況，建議安排營養師諮詢。`);
+                    } else if (lossPercent >= 5.0) {
+                        alert(`⚖️【體重流失警訊】\n較前次紀錄，您的體重已減輕 ${lossPercent.toFixed(1)}%！\n請持續追蹤體重變化，適時調整飲食比例。`);
+                    }
                 }
                 return lossPercent;
             }
 
+            // 【優化】移除系統變數與內部邏輯的顯示，改為病患友善的提示
             function checkLabAlerts(record) {
                 let alertMessages = [], panicMessages = [];
                 for (let key in CLINICAL_LAB_LIMITS) {
                     if (!record[key] || record[key] === '-') continue;
                     let v = parseFloat(record[key]), cfg = CLINICAL_LAB_LIMITS[key];
-                    if (cfg.panicMin !== null && v <= cfg.panicMin) panicMessages.push(`🚨【危急】${cfg.name} 極低：${v} (已達危急 <=${cfg.panicMin})`);
-                    else if (cfg.panicMax !== null && v >= cfg.panicMax) panicMessages.push(`🚨【危急】${cfg.name} 極高：${v} (已達危急 >=${cfg.panicMax})`);
-                    else if (cfg.min !== null && v < cfg.min) alertMessages.push(`⚠️ ${cfg.name} 偏低：${v} (正常: ${cfg.min} ~ ${cfg.max || '無上限'})`);
-                    else if (cfg.max !== null && v > cfg.max) alertMessages.push(`⚠️ ${cfg.name} 偏高：${v} (正常: ${cfg.min || '無下限'} ~ ${cfg.max})`);
+
+                    if (cfg.panicMin !== null && v <= cfg.panicMin) {
+                        panicMessages.push(`🚨【危急】${cfg.name} 數值極低 (${v})`);
+                    } else if (cfg.panicMax !== null && v >= cfg.panicMax) {
+                        panicMessages.push(`🚨【危急】${cfg.name} 數值極高 (${v})`);
+                    } else if (cfg.min !== null && v < cfg.min) {
+                        alertMessages.push(`⚠️ ${cfg.name} 偏低 (${v})，正常範圍: ${cfg.min} ~ ${cfg.max || '無上限'}`);
+                    } else if (cfg.max !== null && v > cfg.max) {
+                        alertMessages.push(`⚠️ ${cfg.name} 偏高 (${v})，正常範圍: ${cfg.min || '無下限'} ~ ${cfg.max}`);
+                    }
                 }
+
                 if (panicMessages.length > 0) {
-                    alert("🛑🛑【臨床危急值最高警示】🛑🛑\n\n" + panicMessages.join("\n") + "\n\n請確認是否填寫錯誤，若填寫無誤，請務必盡快就醫或聯絡護理站！");
+                    alert("🛑🛑【危急值警示】🛑🛑\n\n" + panicMessages.join("\n") + "\n\n系統偵測到您的數值處於危險範圍！\n請確認是否填寫錯誤，若填寫無誤，請務必「盡快就醫」或聯絡護理站！");
                 } else if (alertMessages.length > 0) {
-                    alert("📋【數值警示提醒】\n\n" + alertMessages.join("\n") + "\n\n部分數值超出正常範圍，請留意身體狀況或於下次門診時與醫師討論。");
+                    alert("📋【數值偏離提醒】\n\n" + alertMessages.join("\n") + "\n\n部分數值超出正常範圍，請留意近期身體狀況，並於下次門診時與醫師討論。");
                 }
             }
 
@@ -1221,7 +1245,14 @@
                 labRecords.forEach((r, i) => {
                     html += `<div class="history-card"><button class="btn-delete" onclick="CareApp.deleteRecord('lab', ${i})">刪除</button>
                     <div class="history-date">${r.recordDate}</div><div class="history-data" style="font-size:0.95rem;">`;
-                    if (r.weight) html += `⚖️ 體重: ${r.weight} kg <span style="color:#dc2626;">${r.weightLossMsg ? '(' + r.weightLossMsg + ')' : ''}</span><br>`;
+
+                    let weightMsgDisplay = '';
+                    if (r.weightLossMsg) {
+                        let isGain = r.weightLossMsg.includes('增加');
+                        weightMsgDisplay = ` <span style="color:${isGain ? '#16a34a' : '#dc2626'}; font-weight:bold;">(${r.weightLossMsg})</span>`;
+                    }
+                    if (r.weight) html += `⚖️ 體重: ${r.weight} kg${weightMsgDisplay}<br>`;
+
                     let labs = [];
                     if (r.wbc) labs.push(`WBC: ${r.wbc}`); if (r.hb) labs.push(`Hb: ${r.hb}`);
                     if (r.plt) labs.push(`PLT: ${r.plt}`); if (r.anc) labs.push(`ANC: ${r.anc}`);
@@ -1422,11 +1453,17 @@
                 if (!hasValue) return alert("⚠️ 請至少填寫一項數值！");
 
                 let weightVal = document.getElementById('input-weight').value, dateVal = document.getElementById('lab-date').value || getTodayString();
+
+                // 【已修改】使用精準判斷前一次紀錄的函式
                 let lossPercent = calculateWeightLoss(weightVal, dateVal);
 
                 let newRecord = { recordDate: dateVal, weight: weightVal };
-                if (lossPercent !== null && lossPercent > 0) {
-                    newRecord.weightLossMsg = `較前次減輕 ${lossPercent.toFixed(1)}%`;
+                if (lossPercent !== null) {
+                    if (lossPercent > 0) {
+                        newRecord.weightLossMsg = `較前次減輕 ${lossPercent.toFixed(1)}%`;
+                    } else if (lossPercent < 0) {
+                        newRecord.weightLossMsg = `較前次增加 ${Math.abs(lossPercent).toFixed(1)}%`;
+                    }
                 }
 
                 ['wbc', 'hb', 'cea', 'ca153', 'anc', 'plt', 'got', 'gpt', 'bun', 'cr', 'ldh', 'alp', 'ca125', 'ca199', 'afp', 'psa', 'bhcg', 'cga'].forEach(k => newRecord[k] = document.getElementById(`input-${k}`).value);
@@ -1464,7 +1501,7 @@
             function saveSeData() {
                 if (!validateDateGuard('se-date')) return;
                 let sev = document.getElementById('se-sev').value;
-                if (sev === '嚴重 (需就醫)' && !confirm("🚨 確定儲存「嚴重」症狀？緊急狀況請就醫！")) return;
+                if (sev === '嚴重 (需就醫)' && !confirm("🚨 確定儲存「嚴重」症狀？若情況緊急，請務必『盡快就醫』或聯絡護理站！")) return;
                 let sympVal = document.getElementById('se-symp').value;
                 if (sympVal === '其他') { let other = document.getElementById('se-symp-other').value; if (checkEmpty(other)) return alert("⚠️ 請填寫症狀！"); sympVal = other; }
 
@@ -1541,7 +1578,15 @@
 
                     // 體重列
                     html += `<tr><th>體重 (kg)</th>`;
-                    sortedLabs.forEach(r => html += `<td>${r.weight || '-'}${r.weightLossMsg ? `<br><span style="color:#dc2626;font-size:10px;">(${r.weightLossMsg})</span>` : ''}</td>`);
+                    sortedLabs.forEach(r => {
+                        let weightDisplay = r.weight || '-';
+                        if (r.weightLossMsg) {
+                            let isGain = r.weightLossMsg.includes('增加');
+                            let color = isGain ? '#16a34a' : '#dc2626';
+                            weightDisplay += `<br><span style="color:${color};font-size:10px;">(${r.weightLossMsg})</span>`;
+                        }
+                        html += `<td>${weightDisplay}</td>`;
+                    });
                     html += `</tr>`;
 
                     // 血液與腫瘤指數列 (自動計算紅藍箭頭)
