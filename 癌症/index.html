@@ -835,7 +835,6 @@
             function checkEmpty(val) { return val === null || val === undefined || String(val).trim() === ''; }
             function getTodayString() { const today = new Date(); return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; }
 
-            // 檢查是否輸入負數
             function checkNegativeInput(elementId) {
                 const el = document.getElementById(elementId);
                 if (el && el.value !== '' && parseFloat(el.value) < 0) return true;
@@ -930,7 +929,7 @@
                 else if (site === '大腸癌') switchOncology('colorectal', true);
             }
 
-            // 【優化】精準計算體重變化：只與「輸入日期」之前的「最靠近一筆」紀錄做比較
+            // 【完全更新】精準計算體重變化：只與「輸入日期」之前的「最靠近一筆」紀錄做比較
             function calculateWeightLoss(newWeight, newDateStr) {
                 if (!newWeight || labRecords.length === 0) return null;
                 let currentW = parseFloat(newWeight);
@@ -970,7 +969,7 @@
                 return lossPercent;
             }
 
-            // 【優化】移除系統變數與內部邏輯的顯示，改為病患友善的提示
+            // 【完全更新】移除系統變數與內部邏輯的顯示，改為病患友善的提示
             function checkLabAlerts(record) {
                 let alertMessages = [], panicMessages = [];
                 for (let key in CLINICAL_LAB_LIMITS) {
@@ -1454,7 +1453,7 @@
 
                 let weightVal = document.getElementById('input-weight').value, dateVal = document.getElementById('lab-date').value || getTodayString();
 
-                // 【已修改】使用精準判斷前一次紀錄的函式
+                // 【精準比對】與前一筆紀錄做運算
                 let lossPercent = calculateWeightLoss(weightVal, dateVal);
 
                 let newRecord = { recordDate: dateVal, weight: weightVal };
