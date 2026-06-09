@@ -331,7 +331,6 @@
             margin-left: 0.3rem;
         }
 
-        /* 針對 placeholder 顏色微調，讓它更像淡灰色 */
         .form-input::placeholder {
             color: #94a3b8;
             font-weight: normal;
@@ -448,6 +447,17 @@
             font-weight: bold;
             width: 100%;
             box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+            animation: pulseBtn 2s infinite alternate;
+        }
+
+        @keyframes pulseBtn {
+            0% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+            }
+
+            100% {
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
         }
 
         .action-btn {
@@ -642,6 +652,7 @@
                 margin-bottom: 10px;
             }
 
+            /* 列印用表格，設定欄位較緊湊 */
             .print-table {
                 width: 100%;
                 border-collapse: collapse;
@@ -751,7 +762,8 @@
 
         <div class="content-stream" id="mainContent"></div>
 
-        <div class="bottom-area">
+        <!-- 加入了 ID 方便滾動跳轉 -->
+        <div class="bottom-area" id="export-area">
             <div class="summary-panel" id="side-history">
                 <h3>📂 歷史健康總表 (點擊查看)</h3>
                 <div id="side-history-list">
@@ -787,7 +799,7 @@
             let currentOncology = 'breast';
             let currentSection = 'report';
 
-            // 抽血數值正常範圍 (以常見臨床標準為例，可對應 Word 檔調整)
+            // 抽血數值與腫瘤指數正常範圍 (加入腫瘤指數上限標準)
             const CLINICAL_LAB_LIMITS = {
                 wbc: { name: 'WBC 白血球', min: 3.54, max: 9.06, panicMin: 1.0, panicMax: 50.0 },
                 anc: { name: 'ANC 嗜中性球', min: 1500, max: null, panicMin: 500, panicMax: null },
@@ -796,7 +808,18 @@
                 got: { name: 'SGOT 肝功能', min: 8, max: 37, panicMin: null, panicMax: 200 },
                 gpt: { name: 'SGPT 肝功能', min: 0, max: 41, panicMin: null, panicMax: 200 },
                 bun: { name: 'BUN 腎功能', min: 7, max: 20, panicMin: null, panicMax: 100 },
-                cr: { name: 'Cr 腎功能', min: 0.6, max: 1.3, panicMin: null, panicMax: 3.0 }
+                cr: { name: 'Cr 腎功能', min: 0.6, max: 1.3, panicMin: null, panicMax: 3.0 },
+                // 腫瘤指數 (依照常見抗癌監測值，沒有上限危險值則為 null)
+                cea: { name: 'CEA', min: 0, max: 5.0, panicMin: null, panicMax: null },
+                ca153: { name: 'CA15-3', min: 0, max: 31.3, panicMin: null, panicMax: null },
+                ca125: { name: 'CA-125', min: 0, max: 35.0, panicMin: null, panicMax: null },
+                ca199: { name: 'CA19-9', min: 0, max: 37.0, panicMin: null, panicMax: null },
+                ldh: { name: 'LDH', min: 119, max: 229, panicMin: null, panicMax: null },
+                alp: { name: 'ALP', min: 35, max: 104, panicMin: null, panicMax: null },
+                afp: { name: 'AFP', min: 0, max: 7.0, panicMin: null, panicMax: null },
+                psa: { name: 'PSA', min: 0, max: 4.0, panicMin: null, panicMax: null },
+                cga: { name: 'CgA', min: 0, max: 100.0, panicMin: null, panicMax: null },
+                bhcg: { name: 'bHCG', min: 0, max: 5.0, panicMin: null, panicMax: null }
             };
 
             const reminderDB = {
@@ -813,6 +836,13 @@
 
             function checkEmpty(val) { return val === null || val === undefined || String(val).trim() === ''; }
             function getTodayString() { const today = new Date(); return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; }
+
+            // 檢查是否輸入負數的共用防呆函式
+            function checkNegativeInput(elementId) {
+                const el = document.getElementById(elementId);
+                if (el && el.value !== '' && parseFloat(el.value) < 0) return true;
+                return false;
+            }
 
             function validateDateGuard(inputId) {
                 const dateVal = document.getElementById(inputId).value;
@@ -920,13 +950,16 @@
                 for (let key in CLINICAL_LAB_LIMITS) {
                     if (!record[key] || record[key] === '-') continue;
                     let v = parseFloat(record[key]), cfg = CLINICAL_LAB_LIMITS[key];
-                    if (cfg.panicMin !== null && v <= cfg.panicMin) panicMessages.push(`🚨【危急】${cfg.name}極低：${v} (<=${cfg.panicMin})`);
-                    else if (cfg.panicMax !== null && v >= cfg.panicMax) panicMessages.push(`🚨【危急】${cfg.name}極高：${v} (>=${cfg.panicMax})`);
-                    else if (cfg.min !== null && v < cfg.min) alertMessages.push(`⚠️ ${cfg.name}偏低：${v} (正常: ${cfg.min}~${cfg.max || '無'})`);
-                    else if (cfg.max !== null && v > cfg.max) alertMessages.push(`⚠️ ${cfg.name}偏高：${v} (正常: ${cfg.min || '無'}~${cfg.max})`);
+                    if (cfg.panicMin !== null && v <= cfg.panicMin) panicMessages.push(`🚨【危急】${cfg.name} 極低：${v} (已達危急 <=${cfg.panicMin})`);
+                    else if (cfg.panicMax !== null && v >= cfg.panicMax) panicMessages.push(`🚨【危急】${cfg.name} 極高：${v} (已達危急 >=${cfg.panicMax})`);
+                    else if (cfg.min !== null && v < cfg.min) alertMessages.push(`⚠️ ${cfg.name} 偏低：${v} (正常: ${cfg.min} ~ ${cfg.max || '無上限'})`);
+                    else if (cfg.max !== null && v > cfg.max) alertMessages.push(`⚠️ ${cfg.name} 偏高：${v} (正常: ${cfg.min || '無下限'} ~ ${cfg.max})`);
                 }
-                if (panicMessages.length > 0) alert("🛑【臨床危急值最高警示】🛑\n\n" + panicMessages.join("\n") + "\n\n請立即聯絡個管師或急診！");
-                else if (alertMessages.length > 0) alert("📋【自主監測提醒】\n\n" + alertMessages.join("\n") + "\n\n請於下次門診討論。");
+                if (panicMessages.length > 0) {
+                    alert("🛑🛑【臨床危急值最高警示】🛑🛑\n\n" + panicMessages.join("\n") + "\n\n請確認是否填寫錯誤，若填寫無誤，請務必盡快就醫或聯絡護理站！");
+                } else if (alertMessages.length > 0) {
+                    alert("📋【數值警示提醒】\n\n" + alertMessages.join("\n") + "\n\n部分數值超出正常範圍，請留意身體狀況或於下次門診時與醫師討論。");
+                }
             }
 
             function loadData() {
@@ -1015,7 +1048,7 @@
                         </div>
                         <div class="form-row"><label>癌細胞型態</label><select class="form-select" id="id-type"><option value="">請選擇...</option>${getCellTypeOptions()}</select></div>
                         <div class="grid-2">
-                            <div class="form-row"><label>大小 (cm)</label><input type="number" id="id-size" min="0" step="0.1" inputmode="decimal" class="form-input"></div>
+                            <div class="form-row"><label>大小 (cm)</label><input type="number" id="id-size" min="0" step="0.1" inputmode="decimal" class="form-input" placeholder=">0"></div>
                             <div class="form-row"><label>期別</label><select class="form-select" id="id-stage"><option value=""></option><option value="原位癌">原位癌</option><option value="I期">I期</option><option value="II期">II期</option><option value="III期">III期</option><option value="IV期">IV期</option><option value="不詳">不詳</option></select></div>
                         </div>
                         <hr style="border:0; border-top:1px dashed #cbd5e1; margin: 0.5rem 0 1rem 0;">
@@ -1025,8 +1058,8 @@
                             <select class="form-select" id="id-lymph" onchange="document.getElementById('lymph-detail-container').style.display = (this.value === '有') ? 'block' : 'none';"><option value="無">無</option><option value="有">有</option></select>
                             <div id="lymph-detail-container" class="conditional-div">
                                 <div class="grid-2">
-                                    <div><label>取出(顆)</label><input type="number" id="id-lymph-total" class="form-input" inputmode="numeric" min="0"></div>
-                                    <div><label>感染(顆)</label><input type="number" id="id-lymph-inf" class="form-input" inputmode="numeric" min="0"></div>
+                                    <div><label>取出(顆)</label><input type="number" id="id-lymph-total" class="form-input" inputmode="numeric" min="0" placeholder=">=0"></div>
+                                    <div><label>感染(顆)</label><input type="number" id="id-lymph-inf" class="form-input" inputmode="numeric" min="0" placeholder=">=0"></div>
                                 </div>
                             </div>
                         </div>
@@ -1089,8 +1122,8 @@
                         </div>
                         <div id="tx-chemo-group">
                             <div class="grid-2">
-                                <div class="form-row"><label>第幾次</label><input type="number" id="tx-times" class="form-input" inputmode="numeric"></div>
-                                <div class="form-row"><label>頻率(週)</label><input type="number" id="tx-freq" class="form-input" inputmode="numeric"></div>
+                                <div class="form-row"><label>第幾次</label><input type="number" id="tx-times" class="form-input" inputmode="numeric" min="0" placeholder=">0"></div>
+                                <div class="form-row"><label>頻率(週)</label><input type="number" id="tx-freq" class="form-input" inputmode="numeric" min="0" placeholder=">0"></div>
                             </div>
                             <div class="form-row"><label>下次預定日期</label><input type="date" id="tx-nextdate" class="form-input"></div>
                         </div>
@@ -1099,16 +1132,16 @@
                             <div class="form-row"><label>部位</label><input type="text" id="tx-surg-site" class="form-input" placeholder="${surgSitePh}"></div>
                         </div>
                         <div id="tx-rt-group" style="display:none;">
-                            <div class="form-row"><label>照射部位</label><input type="text" id="tx-rt-site" class="form-input"></div>
+                            <div class="form-row"><label>照射部位</label><input type="text" id="tx-rt-site" class="form-input" placeholder="例如: 腦部"></div>
                             <div class="grid-2">
-                                <div class="form-row"><label>總劑量</label><input type="number" id="tx-rt-dose" class="form-input" inputmode="decimal"></div>
+                                <div class="form-row"><label>總劑量</label><input type="number" id="tx-rt-dose" class="form-input" inputmode="decimal" min="0" placeholder=">0"></div>
                                 <div class="form-row"><label>進度(次)</label><input type="text" id="tx-rt-progress" class="form-input" placeholder="例: 5/25"></div>
                             </div>
                         </div>
                         <div id="tx-other-group" style="display:none;">
-                            <div class="form-row"><label>名稱</label><input type="text" id="tx-other-name" class="form-input"></div>
+                            <div class="form-row"><label>名稱</label><input type="text" id="tx-other-name" class="form-input" placeholder="請輸入治療名稱"></div>
                         </div>
-                        <div class="form-row"><label>備註筆記</label><input type="text" id="tx-notes" class="form-input"></div>
+                        <div class="form-row"><label>備註筆記</label><input type="text" id="tx-notes" class="form-input" placeholder="選填..."></div>
                         <button class="btn-save" onclick="CareApp.saveTxData()">💾 儲存並前往抽血</button>
                     </div>`;
 
@@ -1126,35 +1159,34 @@
             }
 
             function renderLabSection() {
-                // 抽血介面增加正常範圍的淡灰色提示
                 let html = `
                     <div class="info-panel">
                         <div class="info-title">🩸 抽血與體重紀錄</div>
                         <div class="form-row"><label>日期</label><input type="date" id="lab-date" class="form-input" value="${getTodayString()}"></div>
-                        <div class="form-row"><label>體重 (kg)</label><input type="number" id="input-weight" class="form-input" inputmode="decimal" step="0.1"></div>
+                        <div class="form-row"><label>體重 (kg)</label><input type="number" id="input-weight" class="form-input" inputmode="decimal" step="0.1" min="0" placeholder=">0"></div>
                         <hr style="border:0; border-top:1px dashed #cbd5e1; margin: 1rem 0;">
                         <div class="grid-2">
-                            <div class="form-row"><label>WBC <span class="hint-text">(3.54~9.06)</span></label><input type="number" id="input-wbc" class="form-input" inputmode="decimal" placeholder="白血球"></div>
-                            <div class="form-row"><label>Hb <span class="hint-text">(10.8~17.2)</span></label><input type="number" id="input-hb" class="form-input" inputmode="decimal" placeholder="血色素"></div>
-                            <div class="form-row"><label>PLT <span class="hint-text">(148~361)</span></label><input type="number" id="input-plt" class="form-input" inputmode="decimal" placeholder="血小板"></div>
-                            <div class="form-row"><label>ANC <span class="hint-text">(>1500)</span></label><input type="number" id="input-anc" class="form-input" inputmode="decimal" placeholder="嗜中性球"></div>
-                            <div class="form-row"><label>GOT <span class="hint-text">(8~37)</span></label><input type="number" id="input-got" class="form-input" inputmode="decimal" placeholder="肝指數"></div>
-                            <div class="form-row"><label>GPT <span class="hint-text">(0~41)</span></label><input type="number" id="input-gpt" class="form-input" inputmode="decimal" placeholder="肝指數"></div>
-                            <div class="form-row"><label>BUN <span class="hint-text">(7~20)</span></label><input type="number" id="input-bun" class="form-input" inputmode="decimal" placeholder="腎功能"></div>
-                            <div class="form-row"><label>Cr <span class="hint-text">(0.6~1.3)</span></label><input type="number" id="input-cr" class="form-input" inputmode="decimal" placeholder="腎功能"></div>
+                            <div class="form-row"><label>WBC <span class="hint-text">(3.54~9.06)</span></label><input type="number" id="input-wbc" class="form-input" inputmode="decimal" min="0" placeholder="白血球"></div>
+                            <div class="form-row"><label>Hb <span class="hint-text">(10.8~17.2)</span></label><input type="number" id="input-hb" class="form-input" inputmode="decimal" min="0" placeholder="血色素"></div>
+                            <div class="form-row"><label>PLT <span class="hint-text">(148~361)</span></label><input type="number" id="input-plt" class="form-input" inputmode="decimal" min="0" placeholder="血小板"></div>
+                            <div class="form-row"><label>ANC <span class="hint-text">(>1500)</span></label><input type="number" id="input-anc" class="form-input" inputmode="decimal" min="0" placeholder="嗜中性球"></div>
+                            <div class="form-row"><label>GOT <span class="hint-text">(8~37)</span></label><input type="number" id="input-got" class="form-input" inputmode="decimal" min="0" placeholder="肝指數"></div>
+                            <div class="form-row"><label>GPT <span class="hint-text">(0~41)</span></label><input type="number" id="input-gpt" class="form-input" inputmode="decimal" min="0" placeholder="肝指數"></div>
+                            <div class="form-row"><label>BUN <span class="hint-text">(7~20)</span></label><input type="number" id="input-bun" class="form-input" inputmode="decimal" min="0" placeholder="腎功能"></div>
+                            <div class="form-row"><label>Cr <span class="hint-text">(0.6~1.3)</span></label><input type="number" id="input-cr" class="form-input" inputmode="decimal" min="0" placeholder="腎功能"></div>
                         </div>
                         <div class="info-title" style="margin-top:1rem;">🧬 腫瘤指數 (選填)</div>
                         <div class="grid-2">
-                            <div class="form-row"><label>CEA</label><input type="number" id="input-cea" class="form-input" inputmode="decimal"></div>
-                            <div class="form-row"><label>CA15-3</label><input type="number" id="input-ca153" class="form-input" inputmode="decimal"></div>
-                            <div class="form-row"><label>CA-125</label><input type="number" id="input-ca125" class="form-input" inputmode="decimal"></div>
-                            <div class="form-row"><label>CA19-9</label><input type="number" id="input-ca199" class="form-input" inputmode="decimal"></div>
-                            <div class="form-row"><label>LDH</label><input type="number" id="input-ldh" class="form-input" inputmode="decimal"></div>
-                            <div class="form-row"><label>ALP</label><input type="number" id="input-alp" class="form-input" inputmode="decimal"></div>
-                            <div class="form-row"><label>AFP</label><input type="number" id="input-afp" class="form-input" inputmode="decimal"></div>
-                            <div class="form-row"><label>PSA</label><input type="number" id="input-psa" class="form-input" inputmode="decimal"></div>
-                            <div class="form-row"><label>CgA</label><input type="number" id="input-cga" class="form-input" inputmode="decimal"></div>
-                            <div class="form-row"><label>bHCG</label><input type="number" id="input-bhcg" class="form-input" inputmode="decimal"></div>
+                            <div class="form-row"><label>CEA <span class="hint-text">(<5.0)</span></label><input type="number" id="input-cea" class="form-input" inputmode="decimal" min="0"></div>
+                            <div class="form-row"><label>CA15-3 <span class="hint-text">(<31.3)</span></label><input type="number" id="input-ca153" class="form-input" inputmode="decimal" min="0"></div>
+                            <div class="form-row"><label>CA-125 <span class="hint-text">(<35)</span></label><input type="number" id="input-ca125" class="form-input" inputmode="decimal" min="0"></div>
+                            <div class="form-row"><label>CA19-9 <span class="hint-text">(<37)</span></label><input type="number" id="input-ca199" class="form-input" inputmode="decimal" min="0"></div>
+                            <div class="form-row"><label>LDH <span class="hint-text">(119~229)</span></label><input type="number" id="input-ldh" class="form-input" inputmode="decimal" min="0"></div>
+                            <div class="form-row"><label>ALP <span class="hint-text">(35~104)</span></label><input type="number" id="input-alp" class="form-input" inputmode="decimal" min="0"></div>
+                            <div class="form-row"><label>AFP <span class="hint-text">(<7.0)</span></label><input type="number" id="input-afp" class="form-input" inputmode="decimal" min="0"></div>
+                            <div class="form-row"><label>PSA <span class="hint-text">(<4.0)</span></label><input type="number" id="input-psa" class="form-input" inputmode="decimal" min="0"></div>
+                            <div class="form-row"><label>CgA <span class="hint-text">(<100)</span></label><input type="number" id="input-cga" class="form-input" inputmode="decimal" min="0"></div>
+                            <div class="form-row"><label>bHCG <span class="hint-text">(<5.0)</span></label><input type="number" id="input-bhcg" class="form-input" inputmode="decimal" min="0"></div>
                         </div>
                         <button class="btn-save" onclick="CareApp.saveLabData()">💾 儲存並前往檢查</button>
                     </div>`;
@@ -1175,7 +1207,6 @@
             }
 
             function renderExamSection() {
-                // 將檢查結果改為下拉式選單
                 let html = `
                     <div class="info-panel">
                         <div class="info-title">🔍 檢查紀錄</div>
@@ -1223,7 +1254,7 @@
                         <div class="form-row"><label>嚴重程度</label>
                             <select class="form-select" id="se-sev"><option value="輕微">輕微 (可忍受)</option><option value="中度">中度 (影響生活)</option><option value="嚴重 (需就醫)">嚴重 (需就醫)</option></select>
                         </div>
-                        <div class="form-row"><label>備註/處理方式</label><input type="text" id="se-notes" class="form-input"></div>
+                        <div class="form-row"><label>備註/處理方式</label><input type="text" id="se-notes" class="form-input" placeholder="填寫處置方式..."></div>
                         <button class="btn-save" onclick="CareApp.saveSeData()">💾 儲存副作用</button>
                     </div>`;
 
@@ -1250,6 +1281,10 @@
             // --- 儲存與跳轉邏輯區塊 ---
             function saveIdCard() {
                 if (!validateDateGuard('id-date')) return;
+                if (checkNegativeInput('id-size') || checkNegativeInput('id-lymph-total') || checkNegativeInput('id-lymph-inf')) {
+                    return alert("⚠️ 數值不可為負數，請重新確認！");
+                }
+
                 let siteVal = document.getElementById('id-site').value;
                 if (siteVal === '其他') { let other = document.getElementById('id-site-other').value; if (checkEmpty(other)) return alert("⚠️ 請填寫癌症部位！"); siteVal = other; }
                 if (checkEmpty(document.getElementById('id-type').value)) return alert("⚠️ 請選擇癌細胞型態！");
@@ -1295,6 +1330,10 @@
 
             function saveTxData() {
                 if (!validateDateGuard('tx-date')) return;
+                if (checkNegativeInput('tx-times') || checkNegativeInput('tx-freq') || checkNegativeInput('tx-rt-dose')) {
+                    return alert("⚠️ 數值不可為負數，請重新確認！");
+                }
+
                 const typeKey = document.getElementById('tx-type').value, sel = document.getElementById('tx-type');
                 const displayType = sel.options[sel.selectedIndex].text;
                 if (typeKey === 'chemo' && (checkEmpty(document.getElementById('tx-times').value) || checkEmpty(document.getElementById('tx-freq').value))) return alert("⚠️ 請完整填寫資訊！");
@@ -1316,8 +1355,22 @@
 
             function saveLabData() {
                 if (!validateDateGuard('lab-date')) return;
-                const labFields = ['input-weight', 'input-wbc', 'input-anc', 'input-hb', 'input-plt', 'input-got', 'input-gpt', 'input-bun', 'input-cr'];
-                if (!labFields.some(id => !checkEmpty(document.getElementById(id).value))) return alert("⚠️ 請至少填寫一項數值！");
+
+                // 檢查是否為負數
+                const allNumberFields = ['input-weight', 'input-wbc', 'input-anc', 'input-hb', 'input-plt', 'input-got', 'input-gpt', 'input-bun', 'input-cr', 'input-cea', 'input-ca153', 'input-ca125', 'input-ca199', 'input-ldh', 'input-alp', 'input-afp', 'input-psa', 'input-cga', 'input-bhcg'];
+                let hasNegative = false;
+                let hasValue = false;
+
+                allNumberFields.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!checkEmpty(el.value)) {
+                        hasValue = true;
+                        if (parseFloat(el.value) < 0) hasNegative = true;
+                    }
+                });
+
+                if (hasNegative) return alert("⚠️ 數值不可為負數，請重新確認！");
+                if (!hasValue) return alert("⚠️ 請至少填寫一項數值！");
 
                 let weightVal = document.getElementById('input-weight').value, dateVal = document.getElementById('lab-date').value || getTodayString();
                 let lossPercent = calculateWeightLoss(weightVal, dateVal);
@@ -1329,7 +1382,8 @@
 
                 ['wbc', 'hb', 'cea', 'ca153', 'anc', 'plt', 'got', 'gpt', 'bun', 'cr', 'ldh', 'alp', 'ca125', 'ca199', 'afp', 'psa', 'bhcg', 'cga'].forEach(k => newRecord[k] = document.getElementById(`input-${k}`).value);
 
-                checkLabAlerts(newRecord); labRecords.push(newRecord);
+                checkLabAlerts(newRecord);
+                labRecords.push(newRecord);
                 labRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 saveDataToLocal(); updateHistoryPanel();
 
@@ -1368,8 +1422,11 @@
                 seRecords.push({ recordDate: document.getElementById('se-date').value || getTodayString(), symp: sympVal, sev: sev, notes: document.getElementById('se-notes').value });
                 seRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 saveDataToLocal(); updateHistoryPanel();
-                alert("💾 【儲存成功】副作用紀錄已完整記錄！\n✅ 今日所有紀錄已完成填寫。");
+
+                // 跳出完成提示，並自動平滑滾動到頁面底部的匯出總表區塊
+                alert("💾 【儲存成功】副作用紀錄已完整記錄！\n✅ 今日所有紀錄已完成填寫，將為您跳轉至「匯出總表」區塊。");
                 renderSeSection();
+                document.getElementById('export-area').scrollIntoView({ behavior: 'smooth', block: 'end' });
             }
 
             // --- Modal 與 列印匯出 ---
@@ -1407,28 +1464,51 @@
                 } else { html += `<p>尚未填寫身分證資料</p>`; }
                 html += `</div>`;
 
-                // 2. 治療紀錄
+                // 2. 治療紀錄 (顯示完整細節)
                 if (txRecords.length) {
-                    html += `<div class="print-section"><div class="print-section-title">🩺 治療紀錄</div><table class="print-table"><tr><th>日期</th><th>種類</th><th>詳細/備註</th></tr>`;
-                    txRecords.forEach(r => html += `<tr><td>${r.recordDate}</td><td>${r.displayType}</td><td>${r.notes || '-'}</td></tr>`);
+                    html += `<div class="print-section"><div class="print-section-title">🩺 治療紀錄</div><table class="print-table"><tr><th>日期</th><th>種類</th><th>詳細內容</th><th>備註</th></tr>`;
+                    txRecords.forEach(r => {
+                        let details = '';
+                        if (r.typeKey === 'chemo') details = `第${r.chemoTimes}次(每${r.chemoFreq}週), 下次:${r.nextDate}`;
+                        else if (r.typeKey === 'surgery') details = `手術:${r.surgName}, 部位:${r.surgSite}`;
+                        else if (r.typeKey === 'rt') details = `部位:${r.rtSite}, 總劑量:${r.rtDose}, 進度:${r.rtProgress}`;
+                        else if (r.typeKey === 'other') details = `名稱:${r.otherName}`;
+
+                        html += `<tr><td>${r.recordDate}</td><td>${r.displayType}</td><td>${details}</td><td>${r.notes || '-'}</td></tr>`;
+                    });
                     html += `</table></div>`;
                 }
 
-                // 3. 抽血與體重完整紀錄 (包含減輕%)
+                // 3. 抽血與體重完整紀錄 (列轉欄排列，趨勢圖呈現)
                 if (labRecords.length) {
-                    html += `<div class="print-section"><div class="print-section-title">🩸 抽血與體重紀錄</div><table class="print-table">
-                        <tr><th>日期</th><th>體重(kg)</th><th>體重變化</th><th>WBC</th><th>ANC</th><th>Hb</th><th>PLT</th><th>GOT</th><th>GPT</th><th>BUN</th><th>Cr</th><th>其他腫瘤指數</th></tr>`;
-                    labRecords.forEach(r => {
-                        let tumorMarkers = [];
-                        ['cea', 'ca153', 'ca125', 'ca199', 'ldh', 'alp', 'afp', 'psa', 'cga', 'bhcg'].forEach(k => { if (r[k]) tumorMarkers.push(`${k.toUpperCase()}: ${r[k]}`); });
+                    // 將記錄依據日期由舊到新排序 (符合趨勢圖由左至右閱讀習慣)
+                    let sortedLabs = [...labRecords].sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate));
 
-                        html += `<tr>
-                            <td>${r.recordDate}</td><td>${r.weight || '-'}</td><td style="color:#dc2626;">${r.weightLossMsg || '-'}</td>
-                            <td>${r.wbc || '-'}</td><td>${r.anc || '-'}</td><td>${r.hb || '-'}</td><td>${r.plt || '-'}</td>
-                            <td>${r.got || '-'}</td><td>${r.gpt || '-'}</td><td>${r.bun || '-'}</td><td>${r.cr || '-'}</td>
-                            <td>${tumorMarkers.length > 0 ? tumorMarkers.join('<br>') : '-'}</td>
-                        </tr>`;
+                    html += `<div class="print-section"><div class="print-section-title">🩸 抽血與腫瘤指數趨勢表</div><table class="print-table">`;
+
+                    // 日期標題列
+                    html += `<tr><th>項目 \\ 日期</th>`;
+                    sortedLabs.forEach(r => html += `<th>${r.recordDate}</th>`);
+                    html += `</tr>`;
+
+                    // 體重列
+                    html += `<tr><th>體重 (kg)</th>`;
+                    sortedLabs.forEach(r => html += `<td>${r.weight || '-'}${r.weightLossMsg ? `<br><span style="color:#dc2626;font-size:10px;">(${r.weightLossMsg})</span>` : ''}</td>`);
+                    html += `</tr>`;
+
+                    // 檢查其他血液與腫瘤項目，只有當有人填寫過該項目才印出該列
+                    const labKeys = ['wbc', 'anc', 'hb', 'plt', 'got', 'gpt', 'bun', 'cr', 'cea', 'ca153', 'ca125', 'ca199', 'ldh', 'alp', 'afp', 'psa', 'cga', 'bhcg'];
+                    labKeys.forEach(k => {
+                        let hasData = sortedLabs.some(r => r[k]);
+                        if (hasData) {
+                            let cfg = CLINICAL_LAB_LIMITS[k];
+                            let hint = cfg.max ? `(${cfg.min}~${cfg.max})` : (cfg.min ? `(>${cfg.min})` : '');
+                            html += `<tr><th>${cfg.name}<br><span style="font-size:10px;font-weight:normal;">${hint}</span></th>`;
+                            sortedLabs.forEach(r => html += `<td>${r[k] || '-'}</td>`);
+                            html += `</tr>`;
+                        }
                     });
+
                     html += `</table></div>`;
                 }
 
@@ -1441,7 +1521,7 @@
 
                 // 5. 副作用紀錄
                 if (seRecords.length) {
-                    html += `<div class="print-section"><div class="print-section-title">🤢 副作用紀錄</div><table class="print-table"><tr><th>日期</th><th>症狀</th><th>嚴重程度</th><th>備註</th></tr>`;
+                    html += `<div class="print-section"><div class="print-section-title">🤢 副作用紀錄</div><table class="print-table"><tr><th>日期</th><th>症狀</th><th>嚴重程度</th><th>備註/處置</th></tr>`;
                     seRecords.forEach(r => html += `<tr><td>${r.recordDate}</td><td>${r.symp}</td><td>${r.sev}</td><td>${r.notes || '-'}</td></tr>`);
                     html += `</table></div>`;
                 }
