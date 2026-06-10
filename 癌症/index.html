@@ -245,6 +245,14 @@
             transform: scale(1.02);
         }
 
+        /* 小螢幕優化：避免文字斷行 */
+        @media (max-width: 380px) {
+            .menu-btn {
+                font-size: 0.9rem;
+                padding: 0.4rem 0.1rem;
+            }
+        }
+
         /* --- 推播卡片 --- */
         .push-card {
             border: 2px solid #fecdd3;
@@ -484,6 +492,13 @@
             text-decoration: none;
             margin-bottom: 0.8rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .export-hint {
+            text-align: center;
+            font-size: 0.95rem;
+            color: #475569;
+            margin-top: -0.5rem;
         }
 
         /* 歷史紀錄卡片 */
@@ -770,6 +785,7 @@
                 </div>
             </div>
             <button class="btn-export-global" onclick="CareApp.prepareAndPrint()">🖨️ 匯出列印完整報告 (PDF)</button>
+            <div class="export-hint">💡 若無反應，請確認已使用 Safari 或 Chrome 開啟此網頁</div>
         </div>
 
         <div class="modal-overlay" id="dailyModal">
@@ -835,6 +851,7 @@
             function checkEmpty(val) { return val === null || val === undefined || String(val).trim() === ''; }
             function getTodayString() { const today = new Date(); return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; }
 
+            // 檢查是否輸入負數
             function checkNegativeInput(elementId) {
                 const el = document.getElementById(elementId);
                 if (el && el.value !== '' && parseFloat(el.value) < 0) return true;
@@ -885,6 +902,9 @@
 
             function updateReminder() {
                 const stage = document.getElementById('course-selector').value;
+                idCardState.courseStage = stage; // 記憶療程階段
+                saveDataToLocal();
+
                 const data = reminderDB[currentOncology][stage];
                 document.getElementById('pushTitle').innerText = "今日提醒：" + data.t;
                 document.getElementById('pushText').innerText = data.d;
@@ -995,17 +1015,30 @@
             }
 
             function loadData() {
-                idCardState = JSON.parse(localStorage.getItem('7c_idCardState')) || {};
-                txRecords = JSON.parse(localStorage.getItem('7c_txRecords')) || [];
-                labRecords = JSON.parse(localStorage.getItem('7c_labRecords')) || [];
-                examRecords = JSON.parse(localStorage.getItem('7c_examRecords')) || [];
-                seRecords = JSON.parse(localStorage.getItem('7c_seRecords')) || [];
+                try {
+                    idCardState = JSON.parse(localStorage.getItem('7c_idCardState')) || {};
+                    txRecords = JSON.parse(localStorage.getItem('7c_txRecords')) || [];
+                    labRecords = JSON.parse(localStorage.getItem('7c_labRecords')) || [];
+                    examRecords = JSON.parse(localStorage.getItem('7c_examRecords')) || [];
+                    seRecords = JSON.parse(localStorage.getItem('7c_seRecords')) || [];
+                } catch (e) {
+                    console.error("Local storage data corrupted, resetting arrays.");
+                    idCardState = {}; txRecords = []; labRecords = []; examRecords = []; seRecords = [];
+                }
                 if (idCardState.lockedOncology) currentOncology = idCardState.lockedOncology;
             }
 
             function init() {
                 window.scrollTo(0, 0); loadData(); refreshSlogans();
-                setInterval(refreshSlogans, 3600000); checkLockedOncology();
+                setInterval(refreshSlogans, 3600000);
+
+                // 恢復療程階段狀態
+                if (idCardState.courseStage) {
+                    let selector = document.getElementById('course-selector');
+                    if (selector) selector.value = idCardState.courseStage;
+                }
+
+                checkLockedOncology();
                 switchSection('report'); updateHistoryPanel();
             }
 
@@ -1108,7 +1141,7 @@
                             </div>
                         </div>
                         <button class="btn-save" onclick="CareApp.saveIdCard()">💾 儲存並前往治療</button>
-                        ${isLocked ? `<button class="btn-delete-id" onclick="CareApp.deleteIdCard()">🗑️ 刪除身分證並解除鎖定</button>` : ''}
+                        ${isLocked ? `<button class="btn-delete-id" onclick="CareApp.deleteIdCard()">🗑️ 刪除身分證並清除全部紀錄</button>` : ''}
                     </div>`;
 
                 if (idCardState.date) document.getElementById('id-date').value = idCardState.date; else document.getElementById('id-date').value = getTodayString();
@@ -1389,10 +1422,19 @@
             }
 
             function deleteIdCard() {
-                if (confirm("🚨【警告】確定要刪除身分證資料並解除鎖定嗎？")) {
-                    idCardState = {}; currentOncology = 'breast';
-                    saveDataToLocal(); checkLockedOncology();
-                    alert("✅ 身分證已刪除，請重新填寫。");
+                if (confirm("🚨【警告】確定要刪除身分證資料並解除鎖定嗎？\n⚠️ 注意：這將會「一併清除」您過往所有的治療、抽血、檢查與副作用紀錄！")) {
+                    idCardState = {}; 
+                    currentOncology = 'breast';
+                    txRecords = []; 
+                    labRecords = []; 
+                    examRecords = []; 
+                    seRecords = [];
+                    
+                    saveDataToLocal(); 
+                    checkLockedOncology();
+                    updateHistoryPanel();
+                    
+                    alert("✅ 身分證與所有歷史紀錄已徹底刪除，請重新填寫。");
                     renderReportSection(); window.scrollTo(0, 0);
                 }
             }
