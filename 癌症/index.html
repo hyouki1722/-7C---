@@ -6,6 +6,8 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>台東馬偕7C小幫手 - 病患專用版</title>
+    <!-- 引入 html2pdf.js 套件，負責在客戶端直接生成 PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --app-primary: #5b21b6;
@@ -31,6 +33,8 @@
             display: flex;
             justify-content: center;
             min-height: 100vh;
+            min-height: -webkit-fill-available;
+            min-height: 100dvh;
         }
 
         /* --- 手機版主容器 --- */
@@ -39,12 +43,14 @@
             max-width: 500px;
             background-color: var(--bg-color);
             min-height: 100vh;
+            min-height: -webkit-fill-available;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             position: relative;
             box-shadow: 0 0 25px rgba(0, 0, 0, 0.1);
             overflow-x: hidden;
-            padding-bottom: env(safe-area-inset-bottom);
+            padding-bottom: env(safe-area-inset-bottom, 20px);
         }
 
         /* --- 頂部標題 --- */
@@ -52,7 +58,7 @@
             background: linear-gradient(135deg, var(--app-primary), #312e81);
             color: white;
             padding: 1.5rem 1rem;
-            padding-top: calc(1.5rem + env(safe-area-inset-top));
+            padding-top: calc(1.5rem + env(safe-area-inset-top, 0px));
             text-align: center;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             z-index: 100;
@@ -171,11 +177,12 @@
 
         .tab-btn {
             flex: 1;
-            min-width: 80px;
+            min-width: 70px;
             border: 2px solid #cbd5e1;
-            padding: 0.75rem 0.5rem;
+            padding: 0.75rem 0.2rem;
             border-radius: 10px;
             font-weight: bold;
+            font-size: 1rem;
             cursor: pointer;
             background: white;
             color: #475569;
@@ -245,7 +252,6 @@
             transform: scale(1.02);
         }
 
-        /* 小螢幕優化：避免文字斷行 */
         @media (max-width: 380px) {
             .menu-btn {
                 font-size: 0.9rem;
@@ -444,6 +450,7 @@
             box-shadow: 0 4px 6px rgba(220, 38, 38, 0.15);
         }
 
+        /* 匯出按鈕：加入了產生中 (loading) 的視覺回饋 */
         .btn-export-global {
             background: #10b981;
             color: white;
@@ -455,7 +462,15 @@
             font-weight: bold;
             width: 100%;
             box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+            transition: background 0.3s;
             animation: pulseBtn 2s infinite alternate;
+        }
+
+        .btn-export-global.loading {
+            background: #64748b;
+            cursor: not-allowed;
+            animation: none;
+            box-shadow: none;
         }
 
         @keyframes pulseBtn {
@@ -499,6 +514,21 @@
             font-size: 0.95rem;
             color: #475569;
             margin-top: -0.5rem;
+            line-height: 1.4;
+        }
+
+        /* LINE 專屬提示 */
+        .line-warning-hint {
+            display: none;
+            background: #fef2f2;
+            border: 2px solid #fca5a5;
+            color: #b91c1c;
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            text-align: left;
+            margin-bottom: 1rem;
         }
 
         /* 歷史紀錄卡片 */
@@ -553,7 +583,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.6);
-            z-index: 1000;
+            z-index: 2000;
             justify-content: center;
             align-items: center;
         }
@@ -620,96 +650,88 @@
             margin-bottom: 0.5rem;
         }
 
-        /* --- 列印排版 --- */
+        /* --- PDF/列印排版 --- */
         #print-area-global {
             display: none;
+            background: white;
+            padding: 30px;
+            font-family: sans-serif;
+            color: black;
+            width: 800px;
         }
 
-        @media print {
-            body {
-                background: white;
-                padding: 0;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                display: block;
-            }
+        #print-area-global .print-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
 
-            .mobile-app,
-            .modal-overlay {
-                display: none !important;
-            }
+        #print-area-global .print-section {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
 
-            #print-area-global {
-                display: block !important;
-                padding: 20px;
-                font-family: sans-serif;
-                color: black;
-            }
+        #print-area-global .print-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            background: #f3f4f6;
+            padding: 8px;
+            border-left: 5px solid #5b21b6;
+            margin-bottom: 10px;
+        }
 
-            .print-title {
-                text-align: center;
-                font-size: 24px;
-                font-weight: bold;
-                margin-bottom: 20px;
-                border-bottom: 2px solid #000;
-                padding-bottom: 10px;
-            }
+        #print-area-global .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-align: center;
+            border: 1px solid #000;
+        }
 
-            .print-section {
-                margin-bottom: 20px;
-            }
+        #print-area-global .print-table tr {
+            page-break-inside: avoid;
+        }
 
-            .print-section-title {
-                font-size: 18px;
-                font-weight: bold;
-                background: #f3f4f6;
-                padding: 8px;
-                border-left: 5px solid #5b21b6;
-                margin-bottom: 10px;
-            }
+        #print-area-global .print-table th,
+        #print-area-global .print-table td {
+            border: 1px solid #000;
+            padding: 10px;
+            word-break: break-all;
+        }
 
-            .print-table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 10px;
-                font-size: 13px;
-                text-align: center;
-                border: 1px solid #000;
-            }
+        #print-area-global .print-table th {
+            background: #f3f4f6;
+            font-weight: bold;
+        }
 
-            .print-table th,
-            .print-table td {
-                border: 1px solid #000;
-                padding: 8px;
-                word-break: break-all;
-            }
+        #print-area-global .info-table {
+            page-break-inside: avoid;
+        }
 
-            .print-table th {
-                background: #f3f4f6;
-                font-weight: bold;
-            }
+        #print-area-global .info-table th {
+            width: 20%;
+            text-align: right;
+            padding-right: 15px;
+            background: #f8fafc;
+        }
 
-            .info-table th {
-                width: 25%;
-                text-align: right;
-                padding-right: 15px;
-                background: #f8fafc;
-            }
+        #print-area-global .info-table td {
+            width: 30%;
+            text-align: left;
+            padding-left: 15px;
+        }
 
-            .info-table td {
-                width: 25%;
-                text-align: left;
-                padding-left: 15px;
-            }
-
-            .print-disclaimer {
-                margin-top: 30px;
-                border-top: 1px solid #000;
-                padding-top: 10px;
-                font-size: 12px;
-                text-align: center;
-                color: #555;
-            }
+        #print-area-global .print-disclaimer {
+            margin-top: 30px;
+            border-top: 1px solid #000;
+            padding-top: 10px;
+            font-size: 12px;
+            text-align: center;
+            color: #555;
         }
     </style>
 </head>
@@ -744,6 +766,7 @@
                         <button class="tab-btn" id="tab-lung" onclick="CareApp.switchOncology('lung')">肺癌</button>
                         <button class="tab-btn" id="tab-colorectal"
                             onclick="CareApp.switchOncology('colorectal')">大腸癌</button>
+                        <button class="tab-btn" id="tab-other" onclick="CareApp.switchOncology('other')">其他</button>
                     </div>
                 </div>
                 <div class="control-group">
@@ -784,11 +807,18 @@
                     <p style="color:#64748b; font-size:0.95rem;">尚無歷史紀錄。</p>
                 </div>
             </div>
-            <button class="btn-export-global" onclick="CareApp.prepareAndPrint()">🖨️ 匯出列印完整報告 (PDF)</button>
-            <div class="export-hint">💡 若無反應，請確認已使用 Safari 或 Chrome 開啟此網頁</div>
+
+            <!-- LINE 專屬警告區塊 -->
+            <div id="line-browser-warning" class="line-warning-hint">
+                ⚠️ 偵測到您正在使用 LINE 瀏覽器！<br>
+                為了確保 PDF 能夠正常下載與分享，請點擊螢幕右上角的「⋮」或「分享圖示」，選擇「以預設瀏覽器開啟 (Safari 或 Chrome)」。
+            </div>
+
+            <button class="btn-export-global" id="btn-export" onclick="CareApp.exportReport()">🖨️ 匯出完整 PDF 報告</button>
+            <div class="export-hint">💡 點擊後將自動產生 PDF，您可直接選擇儲存到手機檔案、或透過 LINE 傳送給醫師與家屬。</div>
         </div>
 
-        <div class="modal-overlay" id="dailyModal">
+        <div class="modal-overlay" id="dailyModal" onclick="CareApp.handleModalOverlayClick(event)">
             <div class="modal-content">
                 <div class="modal-header">
                     <div class="modal-title" id="modalDateTitle">當日報告總表</div>
@@ -799,12 +829,17 @@
         </div>
     </div>
 
+    <!-- 用於生成 PDF 的隱藏區塊 -->
     <div id="print-area-global"></div>
 
     <script>
         if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
 
         window.CareApp = (function () {
+
+            // --- DOM 操作 Helper (瘦身優化) ---
+            const getEl = (id) => document.getElementById(id);
+            const isLineApp = () => navigator.userAgent.toLowerCase().includes('line');
 
             let idCardState = {};
             let txRecords = [];
@@ -814,7 +849,13 @@
             let currentOncology = 'breast';
             let currentSection = 'report';
 
-            // 抽血數值與腫瘤指數正常範圍 
+            function escapeHTML(str) {
+                if (str === null || str === undefined) return '';
+                return String(str).replace(/[&<>'"]/g, match => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+                }[match]));
+            }
+
             const CLINICAL_LAB_LIMITS = {
                 wbc: { name: '白血球 (WBC)', min: 3.54, max: 9.06, panicMin: 1.0, panicMax: 50.0 },
                 anc: { name: '嗜中性球 (ANC)', min: 1500, max: null, panicMin: 500, panicMax: null },
@@ -839,7 +880,8 @@
             const reminderDB = {
                 breast: { stage1: { t: "第1週期前3天", d: "可能出現輕微噁心感，建議少量多餐。" }, stage2: { t: "化療後第7~14天", d: "白血球低下關鍵期！出入公共場所請配戴口罩。" }, stage3: { t: "放療期間", d: "照射部位皮膚請用溫水輕拍清潔，切勿用力揉搓。" } },
                 lung: { stage1: { t: "化療初期", d: "若有輕微乾咳，可使用溫水漱口保持喉嚨濕潤。" }, stage2: { t: "化療後第7~14天", d: "若體溫超過 38 度請立即就醫，不可自行退燒。" }, stage3: { t: "放療期間", d: "若出現吞嚥疼痛，建議改吃軟質或半流質食物。" } },
-                colorectal: { stage1: { t: "化療初期", d: "神經對『冷刺激』極敏感，拿冰冷物品請戴手套！" }, stage2: { t: "化療後第7~14天", d: "注意排便狀況，若嚴重腹瀉請補充水分與電解質。" }, stage3: { t: "放療期間", d: "肛門周圍如破皮，建議用水沖洗代替衛生紙擦拭。" } }
+                colorectal: { stage1: { t: "化療初期", d: "神經對『冷刺激』極敏感，拿冰冷物品請戴手套！" }, stage2: { t: "化療後第7~14天", d: "注意排便狀況，若嚴重腹瀉請補充水分與電解質。" }, stage3: { t: "放療期間", d: "肛門周圍如破皮，建議用水沖洗代替衛生紙擦拭。" } },
+                other: { stage1: { t: "第1週期第1~3天 (急性期)", d: "請多喝水、多休息，保持均衡飲食，有任何不適請隨時告知醫護人員。" }, stage2: { t: "第1週期第7~14天 (骨髓抑制期)", d: "此階段免疫力較低，請勤洗手、出入公共場所配戴口罩，避免生食。" }, stage3: { t: "放射線治療/其他階段", d: "保持良好作息，遵從醫囑按時回診並記錄特殊症狀。" } }
             };
 
             const sloganList = [
@@ -850,33 +892,31 @@
 
             function checkEmpty(val) { return val === null || val === undefined || String(val).trim() === ''; }
             function getTodayString() { const today = new Date(); return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; }
-
-            // 檢查是否輸入負數
             function checkNegativeInput(elementId) {
-                const el = document.getElementById(elementId);
-                if (el && el.value !== '' && parseFloat(el.value) < 0) return true;
-                return false;
+                const el = getEl(elementId);
+                return (el && el.value !== '' && parseFloat(el.value) < 0);
             }
 
-            // 格式化數值 (列印總表時，標示紅藍箭頭)
             function formatLabValue(key, val) {
-                if (!val || val === '-') return '-';
+                if (val === null || val === undefined || val === '-' || val === '') return '-';
                 let v = parseFloat(val);
-                let cfg = CLINICAL_LAB_LIMITS[key];
-                if (!cfg) return val;
+                if (isNaN(v)) return escapeHTML(val);
 
-                if (cfg.max !== null && v > cfg.max) return `${val} <span style="color:#dc2626; font-weight:bold;">▲</span>`;
-                if (cfg.min !== null && v < cfg.min) return `${val} <span style="color:#2563eb; font-weight:bold;">▼</span>`;
-                return val;
+                let cfg = CLINICAL_LAB_LIMITS[key];
+                if (!cfg) return escapeHTML(val);
+
+                if (cfg.max !== null && v > cfg.max) return `${escapeHTML(val)} <span style="color:#dc2626; font-weight:bold;">▲</span>`;
+                if (cfg.min !== null && v < cfg.min) return `${escapeHTML(val)} <span style="color:#2563eb; font-weight:bold;">▼</span>`;
+                return escapeHTML(val);
             }
 
             function validateDateGuard(inputId) {
-                const dateVal = document.getElementById(inputId).value;
+                const dateVal = getEl(inputId).value;
                 if (dateVal) {
                     const selected = new Date(dateVal);
                     const today = new Date(getTodayString());
                     if (selected > today) {
-                        document.getElementById(inputId).value = getTodayString();
+                        getEl(inputId).value = getTodayString();
                         alert("⚠️ 【日期錯誤修正】\n您選擇了未來的日期！系統已自動為您更正為「今日」。");
                         return false;
                     }
@@ -885,36 +925,40 @@
             }
 
             function saveDataToLocal() {
-                localStorage.setItem('7c_idCardState', JSON.stringify(idCardState));
-                localStorage.setItem('7c_txRecords', JSON.stringify(txRecords));
-                localStorage.setItem('7c_labRecords', JSON.stringify(labRecords));
-                localStorage.setItem('7c_examRecords', JSON.stringify(examRecords));
-                localStorage.setItem('7c_seRecords', JSON.stringify(seRecords));
+                try {
+                    localStorage.setItem('7c_idCardState', JSON.stringify(idCardState));
+                    localStorage.setItem('7c_txRecords', JSON.stringify(txRecords));
+                    localStorage.setItem('7c_labRecords', JSON.stringify(labRecords));
+                    localStorage.setItem('7c_examRecords', JSON.stringify(examRecords));
+                    localStorage.setItem('7c_seRecords', JSON.stringify(seRecords));
+                } catch (e) {
+                    console.error("LocalStorage 儲存失敗:", e);
+                }
             }
 
             function refreshSlogans() {
-                const container = document.getElementById('mobile-slogan-container');
+                const container = getEl('mobile-slogan-container');
                 if (!container) return;
                 container.style.animation = 'none'; container.offsetHeight; container.style.animation = 'fadeIn 0.5s ease-in-out';
                 let r = Math.floor(Math.random() * sloganList.length);
-                container.innerHTML = `<div class="main-slogan">${sloganList[r].main}</div><div class="sub-slogan">${sloganList[r].sub}</div>`;
+                container.innerHTML = `<div class="main-slogan">${escapeHTML(sloganList[r].main)}</div><div class="sub-slogan">${escapeHTML(sloganList[r].sub)}</div>`;
             }
 
             function updateReminder() {
-                const stage = document.getElementById('course-selector').value;
-                idCardState.courseStage = stage; // 記憶療程階段
+                const stage = getEl('course-selector').value;
+                idCardState.courseStage = stage;
                 saveDataToLocal();
 
                 const data = reminderDB[currentOncology][stage];
-                document.getElementById('pushTitle').innerText = "今日提醒：" + data.t;
-                document.getElementById('pushText').innerText = data.d;
+                getEl('pushTitle').innerText = "今日提醒：" + data.t;
+                getEl('pushText').innerText = data.d;
             }
 
             function updateHistoryPanel() {
                 const allDates = new Set();
                 txRecords.forEach(r => allDates.add(r.recordDate)); labRecords.forEach(r => allDates.add(r.recordDate));
                 examRecords.forEach(r => allDates.add(r.recordDate)); seRecords.forEach(r => allDates.add(r.recordDate));
-                const listDiv = document.getElementById('side-history-list');
+                const listDiv = getEl('side-history-list');
                 if (allDates.size === 0) { listDiv.innerHTML = '<p style="color:#64748b; font-size:0.95rem;">尚無歷史紀錄。</p>'; return; }
                 const sortedDates = Array.from(allDates).sort((a, b) => new Date(b) - new Date(a));
                 listDiv.innerHTML = sortedDates.map(date => `<button class="action-btn" style="background:#e0f2fe; color:#0369a1; padding: 1rem; font-size: 1.1rem;" onclick="CareApp.showDailyReport('${date}')">📅 ${date} 健康總表</button>`).join('');
@@ -929,7 +973,7 @@
                     });
                 } else {
                     document.querySelectorAll('.tab-btn').forEach(btn => { btn.disabled = false; btn.classList.remove('active'); });
-                    const activeBtn = document.getElementById(`tab-${currentOncology}`);
+                    const activeBtn = getEl(`tab-${currentOncology}`);
                     if (activeBtn) activeBtn.classList.add('active');
                 }
                 updateReminder();
@@ -943,21 +987,19 @@
             }
 
             function handleSiteChange(site) {
-                document.getElementById('site-other-container').style.display = (site === '其他') ? 'block' : 'none';
+                getEl('site-other-container').style.display = (site === '其他') ? 'block' : 'none';
                 if (site === '乳癌') switchOncology('breast', true);
                 else if (site === '肺癌') switchOncology('lung', true);
                 else if (site === '大腸癌') switchOncology('colorectal', true);
+                else if (site === '其他') switchOncology('other', true);
             }
 
-            // 【完全更新】精準計算體重變化：只與「輸入日期」之前的「最靠近一筆」紀錄做比較
             function calculateWeightLoss(newWeight, newDateStr) {
                 if (!newWeight || labRecords.length === 0) return null;
                 let currentW = parseFloat(newWeight);
                 if (isNaN(currentW) || currentW <= 0) return null;
 
                 let targetDate = new Date(newDateStr);
-
-                // 篩選出日期早於當前輸入日的有效體重紀錄
                 let pastRecords = labRecords.filter(r => {
                     if (!r.weight || isNaN(parseFloat(r.weight))) return false;
                     let rDate = new Date(r.recordDate);
@@ -966,7 +1008,6 @@
 
                 if (pastRecords.length === 0) return null;
 
-                // 排序，取得最接近的一筆歷史紀錄
                 pastRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 let lastValidRecord = pastRecords[0];
 
@@ -976,7 +1017,6 @@
                 let lossPercent = ((prevW - currentW) / prevW) * 100;
                 let daysDiff = (targetDate - new Date(lastValidRecord.recordDate)) / (1000 * 60 * 60 * 24);
 
-                // 只針對體重減輕(lossPercent > 0)發出警示
                 if (daysDiff > 0 && lossPercent > 0) {
                     if (daysDiff <= 7 && lossPercent >= 2.0) {
                         alert(`⚖️【體重快速流失警訊】\n您在 ${daysDiff} 天內體重減輕了 ${lossPercent.toFixed(1)}%！\n建議主動尋求營養師諮詢，補充高蛋白營養。`);
@@ -989,7 +1029,6 @@
                 return lossPercent;
             }
 
-            // 【完全更新】移除系統變數與內部邏輯的顯示，改為病患友善的提示
             function checkLabAlerts(record) {
                 let alertMessages = [], panicMessages = [];
                 for (let key in CLINICAL_LAB_LIMITS) {
@@ -1029,17 +1068,24 @@
             }
 
             function init() {
-                window.scrollTo(0, 0); loadData(); refreshSlogans();
+                window.scrollTo(0, 0);
+                loadData();
+                refreshSlogans();
                 setInterval(refreshSlogans, 3600000);
 
-                // 恢復療程階段狀態
                 if (idCardState.courseStage) {
-                    let selector = document.getElementById('course-selector');
+                    let selector = getEl('course-selector');
                     if (selector) selector.value = idCardState.courseStage;
                 }
 
+                // LINE 瀏覽器專屬提示
+                if (isLineApp()) {
+                    getEl('line-browser-warning').style.display = 'block';
+                }
+
                 checkLockedOncology();
-                switchSection('report'); updateHistoryPanel();
+                switchSection('report');
+                updateHistoryPanel();
             }
 
             function switchOncology(type, fromIDCard = false) {
@@ -1048,17 +1094,17 @@
                 }
                 currentOncology = type; checkLockedOncology();
                 if (currentSection === 'report') {
-                    const typeSelect = document.getElementById('id-type');
+                    const typeSelect = getEl('id-type');
                     if (typeSelect) {
                         let oldVal = typeSelect.value;
                         typeSelect.innerHTML = `<option value="">請選擇...</option>` + getCellTypeOptions();
                         if (Array.from(typeSelect.options).some(opt => opt.value === oldVal)) typeSelect.value = oldVal;
                     }
                     if (!fromIDCard) {
-                        const siteSelect = document.getElementById('id-site');
+                        const siteSelect = getEl('id-site');
                         if (siteSelect && !siteSelect.disabled) {
-                            siteSelect.value = (type === 'breast') ? '乳癌' : (type === 'lung') ? '肺癌' : '大腸癌';
-                            document.getElementById('site-other-container').style.display = 'none';
+                            siteSelect.value = (type === 'breast') ? '乳癌' : (type === 'lung') ? '肺癌' : (type === 'colorectal') ? '大腸癌' : '其他';
+                            getEl('site-other-container').style.display = (type === 'other') ? 'block' : 'none';
                         }
                     }
                 }
@@ -1068,7 +1114,7 @@
             function switchSection(section) {
                 currentSection = section;
                 document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById(`menu-${section}`).classList.add('active');
+                getEl(`menu-${section}`).classList.add('active');
                 if (section === 'report') renderReportSection();
                 if (section === 'tx') renderTxSection();
                 if (section === 'lab') renderLabSection();
@@ -1086,14 +1132,15 @@
                 saveDataToLocal(); updateHistoryPanel(); switchSection(currentSection);
             }
 
-            // --- UI 渲染區塊 ---
             function renderReportSection() {
-                const content = document.getElementById('mainContent');
-                let defaultSite = (currentOncology === 'lung') ? '肺癌' : (currentOncology === 'colorectal') ? '大腸癌' : '乳癌';
-                const siteRawVal = idCardState.siteRaw || defaultSite;
-                const isStandardSite = ['乳癌', '肺癌', '大腸癌', ''].includes(siteRawVal);
-                const isStandardMeta = ['骨骼', '腦部', '肝臟', '肺部', '腹膜', ''].includes(idCardState.metaSiteRaw || '');
+                const content = getEl('mainContent');
+                let defaultSite = (currentOncology === 'lung') ? '肺癌' : (currentOncology === 'colorectal') ? '大腸癌' : (currentOncology === 'other') ? '其他' : '乳癌';
+
                 const isLocked = !!idCardState.lockedOncology;
+                const siteRawVal = isLocked ? (idCardState.siteRaw || defaultSite) : defaultSite;
+
+                const isStandardSite = ['乳癌', '肺癌', '大腸癌'].includes(siteRawVal);
+                const isStandardMeta = ['骨骼', '腦部', '肝臟', '肺部', '腹膜', ''].includes(idCardState.metaSiteRaw || '');
 
                 content.innerHTML = `
                     <div class="info-panel">
@@ -1105,10 +1152,10 @@
                                 <option value="乳癌" ${siteRawVal === '乳癌' ? 'selected' : ''}>乳癌</option>
                                 <option value="肺癌" ${siteRawVal === '肺癌' ? 'selected' : ''}>肺癌</option>
                                 <option value="大腸癌" ${siteRawVal === '大腸癌' ? 'selected' : ''}>大腸癌</option>
-                                <option value="其他" ${!isStandardSite && siteRawVal ? 'selected' : ''}>其他</option>
+                                <option value="其他" ${(!isStandardSite || siteRawVal === '其他') ? 'selected' : ''}>其他</option>
                             </select>
-                            <div id="site-other-container" class="conditional-div" style="display:${!isStandardSite && siteRawVal ? 'block' : 'none'};">
-                                <input type="text" id="id-site-other" class="form-input" placeholder="請輸入您的癌症部位..." value="${!isStandardSite ? siteRawVal : ''}" ${isLocked ? 'disabled' : ''}>
+                            <div id="site-other-container" class="conditional-div" style="display:${(!isStandardSite || siteRawVal === '其他') ? 'block' : 'none'};">
+                                <input type="text" id="id-site-other" class="form-input" placeholder="請手動輸入您的癌症部位 (如：胃癌)..." value="${escapeHTML((!isStandardSite || siteRawVal === '其他') ? (idCardState.site || '') : '')}" ${isLocked ? 'disabled' : ''}>
                             </div>
                         </div>
                         <div class="form-row"><label>癌細胞型態</label><select class="form-select" id="id-type"><option value="">請選擇...</option>${getCellTypeOptions()}</select></div>
@@ -1144,28 +1191,28 @@
                         ${isLocked ? `<button class="btn-delete-id" onclick="CareApp.deleteIdCard()">🗑️ 刪除身分證並清除全部紀錄</button>` : ''}
                     </div>`;
 
-                if (idCardState.date) document.getElementById('id-date').value = idCardState.date; else document.getElementById('id-date').value = getTodayString();
-                if (idCardState.type) document.getElementById('id-type').value = idCardState.type;
-                if (idCardState.stage) document.getElementById('id-stage').value = idCardState.stage;
-                if (idCardState.size) document.getElementById('id-size').value = idCardState.size;
-                if (idCardState.grade) document.getElementById('id-grade').value = idCardState.grade;
-                if (idCardState.ki67) document.getElementById('id-ki67').value = idCardState.ki67;
+                getEl('id-date').value = idCardState.date ? escapeHTML(idCardState.date) : getTodayString();
+                if (idCardState.type) getEl('id-type').value = escapeHTML(idCardState.type);
+                if (idCardState.stage) getEl('id-stage').value = escapeHTML(idCardState.stage);
+                if (idCardState.size) getEl('id-size').value = escapeHTML(idCardState.size);
+                if (idCardState.grade) getEl('id-grade').value = escapeHTML(idCardState.grade);
+                if (idCardState.ki67) getEl('id-ki67').value = escapeHTML(idCardState.ki67);
                 if (idCardState.lymphRaw === '有') {
-                    document.getElementById('id-lymph').value = '有'; document.getElementById('lymph-detail-container').style.display = 'block';
-                    document.getElementById('id-lymph-total').value = idCardState.lymphTotal || ''; document.getElementById('id-lymph-inf').value = idCardState.lymphInf || '';
+                    getEl('id-lymph').value = '有'; getEl('lymph-detail-container').style.display = 'block';
+                    getEl('id-lymph-total').value = escapeHTML(idCardState.lymphTotal) || ''; getEl('id-lymph-inf').value = escapeHTML(idCardState.lymphInf) || '';
                 }
                 if (idCardState.metaRaw === '有') {
-                    document.getElementById('id-meta').value = '有'; document.getElementById('meta-detail-container').style.display = 'block';
-                    if (isStandardMeta) { document.getElementById('id-meta-site').value = idCardState.metaSiteRaw; document.getElementById('meta-site-other-container').style.display = 'none'; }
-                    else { document.getElementById('id-meta-site').value = '其他'; document.getElementById('meta-site-other-container').style.display = 'block'; document.getElementById('id-meta-site-other').value = idCardState.metaSiteRaw || ''; }
+                    getEl('id-meta').value = '有'; getEl('meta-detail-container').style.display = 'block';
+                    if (isStandardMeta) { getEl('id-meta-site').value = escapeHTML(idCardState.metaSiteRaw); getEl('meta-site-other-container').style.display = 'none'; }
+                    else { getEl('id-meta-site').value = '其他'; getEl('meta-site-other-container').style.display = 'block'; getEl('id-meta-site-other').value = escapeHTML(idCardState.metaSiteRaw) || ''; }
                 }
             }
 
             function toggleTxFields(val) {
-                document.getElementById('tx-chemo-group').style.display = (val === 'chemo') ? 'block' : 'none';
-                document.getElementById('tx-surg-group').style.display = (val === 'surgery') ? 'block' : 'none';
-                document.getElementById('tx-rt-group').style.display = (val === 'rt') ? 'block' : 'none';
-                document.getElementById('tx-other-group').style.display = (val === 'other') ? 'block' : 'none';
+                getEl('tx-chemo-group').style.display = (val === 'chemo') ? 'block' : 'none';
+                getEl('tx-surg-group').style.display = (val === 'surgery') ? 'block' : 'none';
+                getEl('tx-rt-group').style.display = (val === 'rt') ? 'block' : 'none';
+                getEl('tx-other-group').style.display = (val === 'other') ? 'block' : 'none';
             }
 
             function renderTxSection() {
@@ -1223,22 +1270,22 @@
 
                 txRecords.forEach((r, i) => {
                     html += `<div class="history-card"><button class="btn-delete" onclick="CareApp.deleteRecord('tx', ${i})">刪除</button>
-                    <div class="history-date">${r.recordDate} - ${r.displayType}</div><div class="history-data">`;
+                    <div class="history-date">${escapeHTML(r.recordDate)} - ${escapeHTML(r.displayType)}</div><div class="history-data">`;
 
                     if (r.typeKey === 'chemo') {
                         let fStr = r.chemoFreqDisplay || (r.chemoFreq ? `每 ${r.chemoFreq} 週` : '-');
-                        html += `第 ${r.chemoTimes} 次 (${fStr})<br>下次預定: ${r.nextDate}`;
+                        html += `第 ${escapeHTML(r.chemoTimes)} 次 (${escapeHTML(fStr)})<br>下次預定: ${escapeHTML(r.nextDate)}`;
                     } else if (r.typeKey === 'surgery') {
-                        html += `手術: ${r.surgName}<br>部位: ${r.surgSite}`;
+                        html += `手術: ${escapeHTML(r.surgName)}<br>部位: ${escapeHTML(r.surgSite)}`;
                     } else if (r.typeKey === 'rt') {
-                        html += `部位: ${r.rtSite} / 總劑量: ${r.rtDose} <br>進度: ${r.rtProgress} (${r.rtFreqDisplay || '-'})`;
+                        html += `部位: ${escapeHTML(r.rtSite)} / 總劑量: ${escapeHTML(r.rtDose)} <br>進度: ${escapeHTML(r.rtProgress)} (${escapeHTML(r.rtFreqDisplay) || '-'})`;
                     } else if (r.typeKey === 'other') {
-                        html += `名稱: ${r.otherName}`;
+                        html += `名稱: ${escapeHTML(r.otherName)}`;
                     }
-                    if (r.notes) html += `<br><span style="color:#64748b;">備註: ${r.notes}</span>`;
+                    if (r.notes) html += `<br><span style="color:#64748b;">備註: ${escapeHTML(r.notes)}</span>`;
                     html += `</div></div>`;
                 });
-                document.getElementById('mainContent').innerHTML = html;
+                getEl('mainContent').innerHTML = html;
             }
 
             function renderLabSection() {
@@ -1276,24 +1323,24 @@
 
                 labRecords.forEach((r, i) => {
                     html += `<div class="history-card"><button class="btn-delete" onclick="CareApp.deleteRecord('lab', ${i})">刪除</button>
-                    <div class="history-date">${r.recordDate}</div><div class="history-data" style="font-size:0.95rem;">`;
+                    <div class="history-date">${escapeHTML(r.recordDate)}</div><div class="history-data" style="font-size:0.95rem;">`;
 
                     let weightMsgDisplay = '';
                     if (r.weightLossMsg) {
                         let isGain = r.weightLossMsg.includes('增加');
-                        weightMsgDisplay = ` <span style="color:${isGain ? '#16a34a' : '#dc2626'}; font-weight:bold;">(${r.weightLossMsg})</span>`;
+                        weightMsgDisplay = ` <span style="color:${isGain ? '#16a34a' : '#dc2626'}; font-weight:bold;">(${escapeHTML(r.weightLossMsg)})</span>`;
                     }
-                    if (r.weight) html += `⚖️ 體重: ${r.weight} kg${weightMsgDisplay}<br>`;
+                    if (r.weight) html += `⚖️ 體重: ${escapeHTML(r.weight)} kg${weightMsgDisplay}<br>`;
 
                     let labs = [];
-                    if (r.wbc) labs.push(`WBC: ${r.wbc}`); if (r.hb) labs.push(`Hb: ${r.hb}`);
-                    if (r.plt) labs.push(`PLT: ${r.plt}`); if (r.anc) labs.push(`ANC: ${r.anc}`);
-                    if (r.got) labs.push(`GOT: ${r.got}`); if (r.gpt) labs.push(`GPT: ${r.gpt}`);
-                    if (r.cr) labs.push(`Cr: ${r.cr}`);
+                    if (r.wbc) labs.push(`WBC: ${escapeHTML(r.wbc)}`); if (r.hb) labs.push(`Hb: ${escapeHTML(r.hb)}`);
+                    if (r.plt) labs.push(`PLT: ${escapeHTML(r.plt)}`); if (r.anc) labs.push(`ANC: ${escapeHTML(r.anc)}`);
+                    if (r.got) labs.push(`GOT: ${escapeHTML(r.got)}`); if (r.gpt) labs.push(`GPT: ${escapeHTML(r.gpt)}`);
+                    if (r.cr) labs.push(`Cr: ${escapeHTML(r.cr)}`);
                     html += labs.join(' / ');
                     html += `</div></div>`;
                 });
-                document.getElementById('mainContent').innerHTML = html;
+                getEl('mainContent').innerHTML = html;
             }
 
             function renderExamSection() {
@@ -1320,9 +1367,9 @@
 
                 examRecords.forEach((r, i) => {
                     html += `<div class="history-card"><button class="btn-delete" onclick="CareApp.deleteRecord('exam', ${i})">刪除</button>
-                    <div class="history-date">${r.recordDate} - ${r.examType}</div><div class="history-data">結果：<strong>${r.examStatus || '-'}</strong><br><span style="color:#64748b; font-size:0.95rem;">備註: ${r.examResultNotes || '無'}</span></div></div>`;
+                    <div class="history-date">${escapeHTML(r.recordDate)} - ${escapeHTML(r.examType)}</div><div class="history-data">結果：<strong>${escapeHTML(r.examStatus) || '-'}</strong><br><span style="color:#64748b; font-size:0.95rem;">備註: ${escapeHTML(r.examResultNotes) || '無'}</span></div></div>`;
                 });
-                document.getElementById('mainContent').innerHTML = html;
+                getEl('mainContent').innerHTML = html;
             }
 
             function renderSeSection() {
@@ -1348,16 +1395,16 @@
                 seRecords.forEach((r, i) => {
                     let sevColor = r.sev === '嚴重 (需就醫)' ? '#dc2626' : (r.sev === '中度' ? '#d97706' : '#16a34a');
                     html += `<div class="history-card"><button class="btn-delete" onclick="CareApp.deleteRecord('se', ${i})">刪除</button>
-                    <div class="history-date">${r.recordDate}</div><div class="history-data">
-                    <strong style="color:${sevColor}">[${r.sev}]</strong> ${r.symp}<br>
-                    <span style="color:#64748b; font-size:0.95rem;">${r.notes || ''}</span></div></div>`;
+                    <div class="history-date">${escapeHTML(r.recordDate)}</div><div class="history-data">
+                    <strong style="color:${sevColor}">[${escapeHTML(r.sev)}]</strong> ${escapeHTML(r.symp)}<br>
+                    <span style="color:#64748b; font-size:0.95rem;">${escapeHTML(r.notes) || ''}</span></div></div>`;
                 });
-                document.getElementById('mainContent').innerHTML = html;
+                getEl('mainContent').innerHTML = html;
             }
 
             function renderLinksSection() {
-                const cancer = idCardState.siteRaw || '尚未設定癌別';
-                const stage = idCardState.stage || '尚未設定期別';
+                const cancer = escapeHTML(idCardState.site) || '尚未設定癌別';
+                const stage = escapeHTML(idCardState.stage) || '尚未設定期別';
 
                 let eduContent = `
                     <div class="modal-section" style="background:#f0f9ff; border:1px solid #bae6fd;">
@@ -1369,7 +1416,7 @@
                     </div>
                 `;
 
-                document.getElementById('mainContent').innerHTML = `
+                getEl('mainContent').innerHTML = `
                     <div class="info-panel">
                         <div class="info-title">🔗 常用衛教與支援資源</div>
                         ${eduContent}
@@ -1380,39 +1427,44 @@
                     </div>`;
             }
 
-            // --- 儲存與跳轉邏輯區塊 ---
             function saveIdCard() {
                 if (!validateDateGuard('id-date')) return;
                 if (checkNegativeInput('id-size') || checkNegativeInput('id-lymph-total') || checkNegativeInput('id-lymph-inf')) {
                     return alert("⚠️ 數值不可為負數，請重新確認！");
                 }
 
-                let siteVal = document.getElementById('id-site').value;
-                if (siteVal === '其他') { let other = document.getElementById('id-site-other').value; if (checkEmpty(other)) return alert("⚠️ 請填寫癌症部位！"); siteVal = other; }
-                if (checkEmpty(document.getElementById('id-type').value)) return alert("⚠️ 請選擇癌細胞型態！");
-                if (checkEmpty(document.getElementById('id-size').value)) return alert("⚠️ 請填寫腫瘤大小！");
-                if (checkEmpty(document.getElementById('id-stage').value)) return alert("⚠️ 請選擇期別！");
-                if (checkEmpty(document.getElementById('id-grade').value)) return alert("⚠️ 請選擇細胞分化程度！");
-                if (checkEmpty(document.getElementById('id-ki67').value)) return alert("⚠️ 請選擇 Ki 67 指數！");
+                let siteVal = getEl('id-site').value;
+                if (siteVal === '其他') {
+                    let other = getEl('id-site-other').value;
+                    if (checkEmpty(other)) return alert("⚠️ 請填寫癌症部位！");
+                    siteVal = other;
+                }
 
-                let lymphStr = document.getElementById('id-lymph').value;
-                let lymphTotal = document.getElementById('id-lymph-total').value, lymphInf = document.getElementById('id-lymph-inf').value;
+                if (checkEmpty(getEl('id-type').value)) return alert("⚠️ 請選擇癌細胞型態！");
+                if (checkEmpty(getEl('id-size').value)) return alert("⚠️ 請填寫腫瘤大小！");
+                if (checkEmpty(getEl('id-stage').value)) return alert("⚠️ 請選擇期別！");
+                if (checkEmpty(getEl('id-grade').value)) return alert("⚠️ 請選擇細胞分化程度！");
+                if (checkEmpty(getEl('id-ki67').value)) return alert("⚠️ 請選擇 Ki 67 指數！");
+
+                let lymphStr = getEl('id-lymph').value;
+                let lymphTotal = getEl('id-lymph-total').value, lymphInf = getEl('id-lymph-inf').value;
                 if (lymphStr === '有') { if (checkEmpty(lymphTotal) || checkEmpty(lymphInf)) return alert("⚠️ 請填寫淋巴細節！"); lymphStr = `有 (取出 ${lymphTotal} 顆，感染 ${lymphInf} 顆)`; }
 
-                let metaRaw = document.getElementById('id-meta').value, metaSiteVal = document.getElementById('id-meta-site').value, metaOtherVal = '';
+                let metaRaw = getEl('id-meta').value, metaSiteVal = getEl('id-meta-site').value, metaOtherVal = '';
                 if (metaRaw === '有') {
-                    if (metaSiteVal === '其他') { metaOtherVal = document.getElementById('id-meta-site-other').value; if (checkEmpty(metaOtherVal)) return alert("⚠️ 請填寫轉移部位！"); metaSiteVal = metaOtherVal; }
+                    if (metaSiteVal === '其他') { metaOtherVal = getEl('id-meta-site-other').value; if (checkEmpty(metaOtherVal)) return alert("⚠️ 請填寫轉移部位！"); metaSiteVal = metaOtherVal; }
                 } else { metaSiteVal = ''; }
 
                 idCardState = {
-                    date: document.getElementById('id-date').value || getTodayString(),
-                    site: siteVal, siteRaw: document.getElementById('id-site').value,
-                    type: document.getElementById('id-type').value, size: document.getElementById('id-size').value,
-                    stage: document.getElementById('id-stage').value, grade: document.getElementById('id-grade').value,
-                    ki67: document.getElementById('id-ki67').value,
-                    lymph: lymphStr, lymphRaw: document.getElementById('id-lymph').value, lymphTotal, lymphInf,
+                    date: getEl('id-date').value || getTodayString(),
+                    site: siteVal,
+                    siteRaw: getEl('id-site').value,
+                    type: getEl('id-type').value, size: getEl('id-size').value,
+                    stage: getEl('id-stage').value, grade: getEl('id-grade').value,
+                    ki67: getEl('id-ki67').value,
+                    lymph: lymphStr, lymphRaw: getEl('id-lymph').value, lymphTotal, lymphInf,
                     meta: metaRaw === '有' ? `有 (部位: ${metaSiteVal})` : metaRaw, metaRaw,
-                    metaSiteRaw: document.getElementById('id-meta-site').value === '其他' ? metaOtherVal : document.getElementById('id-meta-site').value,
+                    metaSiteRaw: getEl('id-meta-site').value === '其他' ? metaOtherVal : getEl('id-meta-site').value,
                     lockedOncology: currentOncology
                 };
 
@@ -1423,17 +1475,17 @@
 
             function deleteIdCard() {
                 if (confirm("🚨【警告】確定要刪除身分證資料並解除鎖定嗎？\n⚠️ 注意：這將會「一併清除」您過往所有的治療、抽血、檢查與副作用紀錄！")) {
-                    idCardState = {}; 
-                    currentOncology = 'breast';
-                    txRecords = []; 
-                    labRecords = []; 
-                    examRecords = []; 
-                    seRecords = [];
-                    
-                    saveDataToLocal(); 
-                    checkLockedOncology();
-                    updateHistoryPanel();
-                    
+                    idCardState = {}; currentOncology = 'breast';
+                    txRecords = []; labRecords = []; examRecords = []; seRecords = [];
+
+                    localStorage.removeItem('7c_idCardState'); localStorage.removeItem('7c_txRecords');
+                    localStorage.removeItem('7c_labRecords'); localStorage.removeItem('7c_examRecords'); localStorage.removeItem('7c_seRecords');
+
+                    checkLockedOncology(); updateHistoryPanel();
+
+                    const courseSelector = getEl('course-selector');
+                    if (courseSelector) courseSelector.value = 'stage1';
+
                     alert("✅ 身分證與所有歷史紀錄已徹底刪除，請重新填寫。");
                     renderReportSection(); window.scrollTo(0, 0);
                 }
@@ -1445,29 +1497,28 @@
                     return alert("⚠️ 數值不可為負數，請重新確認！");
                 }
 
-                const typeKey = document.getElementById('tx-type').value, sel = document.getElementById('tx-type');
+                const typeKey = getEl('tx-type').value, sel = getEl('tx-type');
                 const displayType = sel.options[sel.selectedIndex].text;
-                let record = { recordDate: document.getElementById('tx-date').value || getTodayString(), typeKey, displayType, notes: document.getElementById('tx-notes').value };
+                let record = { recordDate: getEl('tx-date').value || getTodayString(), typeKey, displayType, notes: getEl('tx-notes').value };
 
                 if (typeKey === 'chemo') {
-                    let fType = document.getElementById('tx-freq-type').value, fNum = document.getElementById('tx-freq-num').value;
-                    if (checkEmpty(document.getElementById('tx-times').value) || checkEmpty(fNum)) return alert("⚠️ 請完整填寫化學/標靶的頻率與次數！");
-                    record.chemoTimes = document.getElementById('tx-times').value;
+                    let fType = getEl('tx-freq-type').value, fNum = getEl('tx-freq-num').value;
+                    if (checkEmpty(getEl('tx-times').value) || checkEmpty(fNum)) return alert("⚠️ 請完整填寫化學/標靶的頻率與次數！");
+                    record.chemoTimes = getEl('tx-times').value;
                     record.chemoFreqDisplay = (fType === 'perWeek') ? `每週 ${fNum} 次` : `每 ${fNum} 週一次`;
-                    record.nextDate = document.getElementById('tx-nextdate').value;
+                    record.nextDate = getEl('tx-nextdate').value;
                 } else if (typeKey === 'surgery') {
-                    if (checkEmpty(document.getElementById('tx-surg-name').value) || checkEmpty(document.getElementById('tx-surg-site').value)) return alert("⚠️ 請填寫手術資訊！");
-                    record.surgName = document.getElementById('tx-surg-name').value; record.surgSite = document.getElementById('tx-surg-site').value;
+                    if (checkEmpty(getEl('tx-surg-name').value) || checkEmpty(getEl('tx-surg-site').value)) return alert("⚠️ 請填寫手術資訊！");
+                    record.surgName = getEl('tx-surg-name').value; record.surgSite = getEl('tx-surg-site').value;
                 } else if (typeKey === 'rt') {
-                    let rtFType = document.getElementById('tx-rt-freq-type').value, rtFNum = document.getElementById('tx-rt-freq-num').value;
-                    if (checkEmpty(document.getElementById('tx-rt-site').value) || checkEmpty(document.getElementById('tx-rt-dose').value) || checkEmpty(rtFNum)) return alert("⚠️ 請填寫放療資訊與頻率！");
-                    record.rtSite = document.getElementById('tx-rt-site').value;
-                    record.rtDose = document.getElementById('tx-rt-dose').value;
-                    record.rtProgress = document.getElementById('tx-rt-progress').value;
+                    let rtFType = getEl('tx-rt-freq-type').value, rtFNum = getEl('tx-rt-freq-num').value;
+                    if (checkEmpty(getEl('tx-rt-site').value) || checkEmpty(getEl('tx-rt-dose').value) || checkEmpty(rtFNum)) return alert("⚠️ 請填寫放療資訊與頻率！");
+                    record.rtSite = getEl('tx-rt-site').value; record.rtDose = getEl('tx-rt-dose').value;
+                    record.rtProgress = getEl('tx-rt-progress').value;
                     record.rtFreqDisplay = (rtFType === 'perWeek') ? `每週 ${rtFNum} 次` : `每 ${rtFNum} 週一次`;
                 } else if (typeKey === 'other') {
-                    if (checkEmpty(document.getElementById('tx-other-name').value)) return alert("⚠️ 請輸入名稱！");
-                    record.otherName = document.getElementById('tx-other-name').value;
+                    if (checkEmpty(getEl('tx-other-name').value)) return alert("⚠️ 請輸入名稱！");
+                    record.otherName = getEl('tx-other-name').value;
                 }
 
                 txRecords.push(record); txRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
@@ -1483,35 +1534,28 @@
                 let hasNegative = false; let hasValue = false;
 
                 allNumberFields.forEach(id => {
-                    const el = document.getElementById(id);
+                    const el = getEl(id);
                     if (!checkEmpty(el.value)) {
-                        hasValue = true;
-                        if (parseFloat(el.value) < 0) hasNegative = true;
+                        hasValue = true; if (parseFloat(el.value) < 0) hasNegative = true;
                     }
                 });
 
                 if (hasNegative) return alert("⚠️ 數值不可為負數，請重新確認！");
                 if (!hasValue) return alert("⚠️ 請至少填寫一項數值！");
 
-                let weightVal = document.getElementById('input-weight').value, dateVal = document.getElementById('lab-date').value || getTodayString();
-
-                // 【精準比對】與前一筆紀錄做運算
+                let weightVal = getEl('input-weight').value, dateVal = getEl('lab-date').value || getTodayString();
                 let lossPercent = calculateWeightLoss(weightVal, dateVal);
 
                 let newRecord = { recordDate: dateVal, weight: weightVal };
                 if (lossPercent !== null) {
-                    if (lossPercent > 0) {
-                        newRecord.weightLossMsg = `較前次減輕 ${lossPercent.toFixed(1)}%`;
-                    } else if (lossPercent < 0) {
-                        newRecord.weightLossMsg = `較前次增加 ${Math.abs(lossPercent).toFixed(1)}%`;
-                    }
+                    if (lossPercent > 0) { newRecord.weightLossMsg = `較前次減輕 ${lossPercent.toFixed(1)}%`; }
+                    else if (lossPercent < 0) { newRecord.weightLossMsg = `較前次增加 ${Math.abs(lossPercent).toFixed(1)}%`; }
                 }
 
-                ['wbc', 'hb', 'cea', 'ca153', 'anc', 'plt', 'got', 'gpt', 'bun', 'cr', 'ldh', 'alp', 'ca125', 'ca199', 'afp', 'psa', 'bhcg', 'cga'].forEach(k => newRecord[k] = document.getElementById(`input-${k}`).value);
+                ['wbc', 'hb', 'cea', 'ca153', 'anc', 'plt', 'got', 'gpt', 'bun', 'cr', 'ldh', 'alp', 'ca125', 'ca199', 'afp', 'psa', 'bhcg', 'cga'].forEach(k => newRecord[k] = getEl(`input-${k}`).value);
 
                 checkLabAlerts(newRecord);
-                labRecords.push(newRecord);
-                labRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
+                labRecords.push(newRecord); labRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 saveDataToLocal(); updateHistoryPanel();
 
                 alert("💾 【儲存成功】抽血與體重紀錄已更新！\n👉 接下來為您自動跳轉至「檢查紀錄」頁面。");
@@ -1520,19 +1564,10 @@
 
             function saveExamData() {
                 if (!validateDateGuard('exam-date')) return;
-                let examTypeVal = document.getElementById('exam-type').value;
-                if (examTypeVal === '其他') { let other = document.getElementById('exam-type-other').value; if (checkEmpty(other)) return alert("⚠️ 請填寫項目！"); examTypeVal = other; }
+                let examTypeVal = getEl('exam-type').value;
+                if (examTypeVal === '其他') { let other = getEl('exam-type-other').value; if (checkEmpty(other)) return alert("⚠️ 請填寫項目！"); examTypeVal = other; }
 
-                let examStatus = document.getElementById('exam-status').value;
-                let examResultNotes = document.getElementById('exam-result-notes').value;
-
-                examRecords.push({
-                    recordDate: document.getElementById('exam-date').value || getTodayString(),
-                    examType: examTypeVal,
-                    examStatus: examStatus,
-                    examResultNotes: examResultNotes
-                });
-
+                examRecords.push({ recordDate: getEl('exam-date').value || getTodayString(), examType: examTypeVal, examStatus: getEl('exam-status').value, examResultNotes: getEl('exam-result-notes').value });
                 examRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 saveDataToLocal(); updateHistoryPanel();
                 alert("💾 【儲存成功】檢查紀錄已新增！\n👉 接下來為您自動跳轉至「副作用」頁面填寫。");
@@ -1541,106 +1576,107 @@
 
             function saveSeData() {
                 if (!validateDateGuard('se-date')) return;
-                let sev = document.getElementById('se-sev').value;
+                let sev = getEl('se-sev').value;
                 if (sev === '嚴重 (需就醫)' && !confirm("🚨 確定儲存「嚴重」症狀？若情況緊急，請務必『盡快就醫』或聯絡護理站！")) return;
-                let sympVal = document.getElementById('se-symp').value;
-                if (sympVal === '其他') { let other = document.getElementById('se-symp-other').value; if (checkEmpty(other)) return alert("⚠️ 請填寫症狀！"); sympVal = other; }
+                let sympVal = getEl('se-symp').value;
+                if (sympVal === '其他') { let other = getEl('se-symp-other').value; if (checkEmpty(other)) return alert("⚠️ 請填寫症狀！"); sympVal = other; }
 
-                seRecords.push({ recordDate: document.getElementById('se-date').value || getTodayString(), symp: sympVal, sev: sev, notes: document.getElementById('se-notes').value });
+                seRecords.push({ recordDate: getEl('se-date').value || getTodayString(), symp: sympVal, sev: sev, notes: getEl('se-notes').value });
                 seRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 saveDataToLocal(); updateHistoryPanel();
 
                 alert("💾 【儲存成功】副作用紀錄已完整記錄！\n✅ 今日所有紀錄已完成填寫，將為您跳轉至「匯出總表」區塊。");
-                renderSeSection();
-                document.getElementById('export-area').scrollIntoView({ behavior: 'smooth', block: 'end' });
+                renderSeSection(); getEl('export-area').scrollIntoView({ behavior: 'smooth', block: 'end' });
             }
 
-            // --- Modal 與 列印匯出 ---
             function showDailyReport(dateStr) {
-                document.getElementById('modalDateTitle').innerText = `${dateStr} 健康總表`;
+                getEl('modalDateTitle').innerText = `${escapeHTML(dateStr)} 健康總表`;
                 let html = '';
                 let dTx = txRecords.filter(r => r.recordDate === dateStr);
                 let dLab = labRecords.filter(r => r.recordDate === dateStr);
                 let dExam = examRecords.filter(r => r.recordDate === dateStr);
                 let dSe = seRecords.filter(r => r.recordDate === dateStr);
 
-                if (dTx.length) { html += `<div class="modal-section"><h4>🩺 治療</h4><ul>` + dTx.map(r => `<li>${r.displayType}</li>`).join('') + `</ul></div>`; }
-                if (dLab.length) { html += `<div class="modal-section"><h4>🩸 數值</h4><ul>` + dLab.map(r => `<li>體重: ${r.weight || '-'} / WBC: ${r.wbc || '-'} / Hb: ${r.hb || '-'}</li>`).join('') + `</ul></div>`; }
-                if (dExam.length) { html += `<div class="modal-section"><h4>🔍 檢查</h4><ul>` + dExam.map(r => `<li>${r.examType} (${r.examStatus})</li>`).join('') + `</ul></div>`; }
-                if (dSe.length) { html += `<div class="modal-section"><h4>🤢 副作用</h4><ul>` + dSe.map(r => `<li>[${r.sev}] ${r.symp}</li>`).join('') + `</ul></div>`; }
+                if (dTx.length) { html += `<div class="modal-section"><h4>🩺 治療</h4><ul>` + dTx.map(r => `<li>${escapeHTML(r.displayType)}</li>`).join('') + `</ul></div>`; }
+                if (dLab.length) { html += `<div class="modal-section"><h4>🩸 數值</h4><ul>` + dLab.map(r => `<li>體重: ${escapeHTML(r.weight) || '-'} / WBC: ${escapeHTML(r.wbc) || '-'} / Hb: ${escapeHTML(r.hb) || '-'}</li>`).join('') + `</ul></div>`; }
+                if (dExam.length) { html += `<div class="modal-section"><h4>🔍 檢查</h4><ul>` + dExam.map(r => `<li>${escapeHTML(r.examType)} (${escapeHTML(r.examStatus)})</li>`).join('') + `</ul></div>`; }
+                if (dSe.length) { html += `<div class="modal-section"><h4>🤢 副作用</h4><ul>` + dSe.map(r => `<li>[${escapeHTML(r.sev)}] ${escapeHTML(r.symp)}</li>`).join('') + `</ul></div>`; }
 
-                document.getElementById('modalBody').innerHTML = html || '<p>當日無詳細紀錄。</p>';
-                document.getElementById('dailyModal').style.display = 'flex';
+                getEl('modalBody').innerHTML = html || '<p>當日無詳細紀錄。</p>';
+                getEl('dailyModal').style.display = 'flex';
             }
 
-            function closeModal() { document.getElementById('dailyModal').style.display = 'none'; }
+            function closeModal() { getEl('dailyModal').style.display = 'none'; }
+            function handleModalOverlayClick(event) { if (event.target.id === 'dailyModal') closeModal(); }
 
-            function prepareAndPrint() {
-                let pa = document.getElementById('print-area-global');
+            // --- 統一的 PDF 匯出與分享功能 ---
+            function exportReport() {
+                // 如果是在 LINE 環境，主動跳出高強度提示
+                if (isLineApp()) {
+                    alert("⚠️ 系統偵測：您正使用 LINE 內部瀏覽器！\n\n由於 LINE 瀏覽器安全限制，匯出檔案可能會無反應。\n\n💡【強烈建議】請點選右上方「⋮」或「分享圖示」，選擇「以預設瀏覽器開啟」(如 Safari 或 Chrome) 後再執行匯出。");
+                }
+
+                const btn = getEl('btn-export');
+                if (!btn) return;
+
+                btn.classList.add('loading');
+                btn.innerText = "🔄 正在產生 PDF 總表...";
+                btn.disabled = true;
+
+                let pa = getEl('print-area-global');
                 let html = `<div class="print-title">台東馬偕 7C 腫瘤照護總表</div>`;
 
                 // 1. 癌症身分證
                 html += `<div class="print-section"><div class="print-section-title">🪪 癌症身分證</div>`;
                 if (idCardState.site) {
                     html += `<table class="print-table info-table">
-                        <tr><th>部位</th><td>${idCardState.site}</td><th>型態</th><td>${idCardState.type}</td></tr>
-                        <tr><th>期別</th><td>${idCardState.stage}</td><th>大小</th><td>${idCardState.size} cm</td></tr>
-                        <tr><th>分化程度</th><td>${idCardState.grade}</td><th>Ki-67</th><td>${idCardState.ki67}</td></tr>
+                        <tr><th>部位</th><td>${escapeHTML(idCardState.site)}</td><th>型態</th><td>${escapeHTML(idCardState.type)}</td></tr>
+                        <tr><th>期別</th><td>${escapeHTML(idCardState.stage)}</td><th>大小</th><td>${escapeHTML(idCardState.size)} cm</td></tr>
+                        <tr><th>分化程度</th><td>${escapeHTML(idCardState.grade)}</td><th>Ki-67</th><td>${escapeHTML(idCardState.ki67)}</td></tr>
                     </table>`;
                 } else { html += `<p>尚未填寫身分證資料</p>`; }
                 html += `</div>`;
 
-                // 2. 治療紀錄 (顯示頻率細節)
+                // 2. 治療紀錄
                 if (txRecords.length) {
                     html += `<div class="print-section"><div class="print-section-title">🩺 治療紀錄</div><table class="print-table"><tr><th>日期</th><th>種類</th><th>詳細內容</th><th>備註</th></tr>`;
                     txRecords.forEach(r => {
                         let details = '';
                         if (r.typeKey === 'chemo') {
                             let fStr = r.chemoFreqDisplay || (r.chemoFreq ? `每 ${r.chemoFreq} 週` : '-');
-                            details = `第 ${r.chemoTimes} 次 (${fStr}), 下次預定:${r.nextDate || '-'}`;
-                        } else if (r.typeKey === 'surgery') details = `手術:${r.surgName}, 部位:${r.surgSite}`;
-                        else if (r.typeKey === 'rt') details = `部位:${r.rtSite}, 總劑量:${r.rtDose}, 進度:${r.rtProgress} (${r.rtFreqDisplay || '-'})`;
-                        else if (r.typeKey === 'other') details = `名稱:${r.otherName}`;
-
-                        html += `<tr><td>${r.recordDate}</td><td>${r.displayType}</td><td>${details}</td><td>${r.notes || '-'}</td></tr>`;
+                            details = `第 ${escapeHTML(r.chemoTimes)} 次 (${escapeHTML(fStr)}), 下次預定:${escapeHTML(r.nextDate) || '-'}`;
+                        } else if (r.typeKey === 'surgery') details = `手術:${escapeHTML(r.surgName)}, 部位:${escapeHTML(r.surgSite)}`;
+                        else if (r.typeKey === 'rt') details = `部位:${escapeHTML(r.rtSite)}, 總劑量:${escapeHTML(r.rtDose)}, 進度:${escapeHTML(r.rtProgress)} (${escapeHTML(r.rtFreqDisplay) || '-'})`;
+                        else if (r.typeKey === 'other') details = `名稱:${escapeHTML(r.otherName)}`;
+                        html += `<tr><td>${escapeHTML(r.recordDate)}</td><td>${escapeHTML(r.displayType)}</td><td>${details}</td><td>${escapeHTML(r.notes) || '-'}</td></tr>`;
                     });
                     html += `</table></div>`;
                 }
 
-                // 3. 抽血與體重完整紀錄 (動態紅藍箭頭 + 趨勢圖呈現)
+                // 3. 抽血與體重完整紀錄
                 if (labRecords.length) {
                     let sortedLabs = [...labRecords].sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate));
-                    html += `<div class="print-section"><div class="print-section-title">🩸 抽血與腫瘤指數趨勢表</div><table class="print-table">`;
-
-                    // 日期列
-                    html += `<tr><th>項目 \\ 日期</th>`;
-                    sortedLabs.forEach(r => html += `<th>${r.recordDate}</th>`);
-                    html += `</tr>`;
-
-                    // 體重列
-                    html += `<tr><th>體重 (kg)</th>`;
+                    html += `<div class="print-section"><div class="print-section-title">🩸 抽血與腫瘤指數趨勢表</div><table class="print-table"><tr><th>項目 \\ 日期</th>`;
+                    sortedLabs.forEach(r => html += `<th>${escapeHTML(r.recordDate)}</th>`);
+                    html += `</tr><tr><th>體重 (kg)</th>`;
                     sortedLabs.forEach(r => {
-                        let weightDisplay = r.weight || '-';
+                        let weightDisplay = escapeHTML(r.weight) || '-';
                         if (r.weightLossMsg) {
                             let isGain = r.weightLossMsg.includes('增加');
                             let color = isGain ? '#16a34a' : '#dc2626';
-                            weightDisplay += `<br><span style="color:${color};font-size:10px;">(${r.weightLossMsg})</span>`;
+                            weightDisplay += `<br><span style="color:${color};font-size:10px;">(${escapeHTML(r.weightLossMsg)})</span>`;
                         }
                         html += `<td>${weightDisplay}</td>`;
                     });
                     html += `</tr>`;
-
-                    // 血液與腫瘤指數列 (自動計算紅藍箭頭)
                     const labKeys = ['wbc', 'anc', 'hb', 'plt', 'got', 'gpt', 'bun', 'cr', 'cea', 'ca153', 'ca125', 'ca199', 'ldh', 'alp', 'afp', 'psa', 'cga', 'bhcg'];
                     labKeys.forEach(k => {
                         let hasData = sortedLabs.some(r => r[k]);
                         if (hasData) {
                             let cfg = CLINICAL_LAB_LIMITS[k];
                             let hint = cfg.max ? `(${cfg.min || '0'}~${cfg.max})` : (cfg.min ? `(>${cfg.min})` : '');
-                            html += `<tr><th>${cfg.name}<br><span style="font-size:10px;font-weight:normal;">${hint}</span></th>`;
-                            sortedLabs.forEach(r => {
-                                html += `<td>${formatLabValue(k, r[k])}</td>`;
-                            });
+                            html += `<tr><th>${escapeHTML(cfg.name)}<br><span style="font-size:10px;font-weight:normal;">${escapeHTML(hint)}</span></th>`;
+                            sortedLabs.forEach(r => { html += `<td>${formatLabValue(k, r[k])}</td>`; });
                             html += `</tr>`;
                         }
                     });
@@ -1650,26 +1686,71 @@
                 // 4. 檢查紀錄
                 if (examRecords.length) {
                     html += `<div class="print-section"><div class="print-section-title">🔍 檢查紀錄</div><table class="print-table"><tr><th>日期</th><th>項目</th><th>結果</th><th>備註</th></tr>`;
-                    examRecords.forEach(r => html += `<tr><td>${r.recordDate}</td><td>${r.examType}</td><td>${r.examStatus || '-'}</td><td>${r.examResultNotes || '-'}</td></tr>`);
+                    examRecords.forEach(r => html += `<tr><td>${escapeHTML(r.recordDate)}</td><td>${escapeHTML(r.examType)}</td><td>${escapeHTML(r.examStatus) || '-'}</td><td>${escapeHTML(r.examResultNotes) || '-'}</td></tr>`);
                     html += `</table></div>`;
                 }
 
                 // 5. 副作用紀錄
                 if (seRecords.length) {
                     html += `<div class="print-section"><div class="print-section-title">🤢 副作用紀錄</div><table class="print-table"><tr><th>日期</th><th>症狀</th><th>嚴重程度</th><th>備註/處置</th></tr>`;
-                    seRecords.forEach(r => html += `<tr><td>${r.recordDate}</td><td>${r.symp}</td><td>${r.sev}</td><td>${r.notes || '-'}</td></tr>`);
+                    seRecords.forEach(r => html += `<tr><td>${escapeHTML(r.recordDate)}</td><td>${escapeHTML(r.symp)}</td><td>${escapeHTML(r.sev)}</td><td>${escapeHTML(r.notes) || '-'}</td></tr>`);
                     html += `</table></div>`;
                 }
 
                 html += `<div class="print-disclaimer">此報告由病患自主紀錄，僅供醫療團隊參考評估使用。列印時間：${new Date().toLocaleString('zh-TW')}</div>`;
                 pa.innerHTML = html;
-                window.print();
+
+                pa.style.display = 'block';
+
+                const opt = {
+                    margin: 10,
+                    filename: '7C腫瘤照護總表.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                html2pdf().set(opt).from(pa).output('blob').then(function (pdfBlob) {
+                    pa.style.display = 'none';
+                    btn.classList.remove('loading');
+                    btn.innerText = "🖨️ 匯出完整 PDF 報告";
+                    btn.disabled = false;
+
+                    const file = new File([pdfBlob], "7C腫瘤照護總表.pdf", { type: 'application/pdf' });
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        navigator.share({
+                            files: [file],
+                            title: '7C腫瘤照護總表',
+                            text: '這是我近期的7C腫瘤照護紀錄，請參考。'
+                        }).catch((error) => {
+                            console.log('分享已取消或失敗:', error);
+                        });
+                    } else {
+                        const url = URL.createObjectURL(pdfBlob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = '7C腫瘤照護總表.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }
+                }).catch(function (err) {
+                    pa.style.display = 'none';
+                    btn.classList.remove('loading');
+                    btn.innerText = "🖨️ 匯出完整 PDF 報告";
+                    btn.disabled = false;
+                    alert("⚠️ PDF 產生失敗，請確認您的網路連線或嘗試使用外部瀏覽器開啟。");
+                    console.error(err);
+                });
             }
 
             return {
                 init, switchOncology, updateReminder, switchSection, toggleTxFields,
                 handleSiteChange, saveIdCard, deleteIdCard, saveTxData, saveLabData,
-                saveExamData, saveSeData, deleteRecord, showDailyReport, closeModal, prepareAndPrint
+                saveExamData, saveSeData, deleteRecord, showDailyReport, closeModal,
+                handleModalOverlayClick, exportReport
             };
         })();
 
