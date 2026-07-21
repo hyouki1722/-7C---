@@ -3,8 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>台東馬偕7C護照 - 病患專用版</title>
     <!-- 引入 html2pdf.js 套件，負責在客戶端直接生成 PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -22,7 +21,6 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            /* 針對長者放大基礎字體 */
             font-size: 1.2rem;
             -webkit-tap-highlight-color: transparent;
         }
@@ -38,7 +36,6 @@
             min-height: 100dvh;
         }
 
-        /* --- 手機版主容器 --- */
         .mobile-app {
             width: 100%;
             max-width: 500px;
@@ -54,7 +51,6 @@
             padding-bottom: env(safe-area-inset-bottom, 20px);
         }
 
-        /* --- 頂部標題 --- */
         .app-header {
             background: linear-gradient(135deg, var(--app-primary), #312e81);
             color: white;
@@ -71,7 +67,6 @@
             letter-spacing: 2px;
         }
 
-        /* --- 頂部區塊 --- */
         .top-area {
             padding: 1rem;
             display: flex;
@@ -80,7 +75,6 @@
             background: var(--bg-color);
         }
 
-        /* 標語 */
         .mobile-slogan {
             background: rgba(255, 255, 255, 0.95);
             padding: 1.2rem;
@@ -117,7 +111,6 @@
             }
         }
 
-        /* 設定面板 */
         .settings-panel {
             background: white;
             border-radius: 16px;
@@ -189,7 +182,6 @@
             background: #f8fafc;
         }
 
-        /* --- 導覽選單 (2x2 大方塊) --- */
         .menu-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -228,7 +220,6 @@
             box-shadow: 0 4px 6px rgba(91, 33, 182, 0.15);
         }
 
-        /* --- 推播卡片 --- */
         .push-card {
             border: 2px solid #fecdd3;
             background-color: #fff5f7;
@@ -267,7 +258,6 @@
             line-height: 1.4;
         }
 
-        /* --- 主內容區塊 --- */
         .content-stream {
             flex-grow: 1;
             padding: 0 1rem 1rem 1rem;
@@ -293,7 +283,6 @@
             padding-bottom: 0.6rem;
         }
 
-        /* --- 表單元件 --- */
         .form-row {
             display: flex;
             flex-direction: column;
@@ -359,7 +348,6 @@
             border: 1px dashed #cbd5e1;
         }
 
-        /* --- 底部區域與按鈕 --- */
         .bottom-area {
             padding: 1rem;
             display: flex;
@@ -566,31 +554,48 @@
             animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        /* 預覽專用視窗微調 */
+        /* 【重大修改】極大化預覽專用視窗 */
         .preview-modal-content {
-            max-width: 600px;
-            max-height: 90vh;
+            width: 98%;
+            max-width: 800px;
+            height: 92vh;
+            /* 拉滿高度 */
             display: flex;
             flex-direction: column;
-            padding: 1.5rem;
+            padding: 1.2rem;
             background: white;
-            width: 100%;
-            border-radius: 20px;
+            border-radius: 16px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
             animation: popIn 0.3s;
         }
 
         .preview-scroll-area {
-            flex-grow: 1;
-            overflow-y: auto;
+            flex: 1;
+            /* 重要：自動撐開填滿剩餘的全部空間 */
+            overflow: auto;
+            /* 允許上下左右滑動 */
             text-align: left;
-            font-size: 1rem;
-            line-height: 1.5;
-            padding: 1rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0.8rem;
             border: 2px solid #cbd5e1;
             border-radius: 8px;
             background: #f8fafc;
+            padding: 0;
+        }
+
+        /* 縮小按鈕區塊佔比 */
+        .preview-btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            flex-shrink: 0;
+            /* 防止按鈕區被壓縮 */
+        }
+
+        .preview-btn-group button {
+            padding: 1rem;
+            /* 縮小按鈕高度 */
+            font-size: 1.2rem;
+            margin: 0;
         }
 
         @keyframes popIn {
@@ -605,14 +610,18 @@
             }
         }
 
-        /* --- PDF列印專用樣式 (隱藏並用於產出) --- */
+        /* --- 【重大修改】PDF 隱藏繪製區：解決下載空白問題 --- */
         #print-area-global {
-            display: none;
+            position: absolute;
+            top: 0;
+            left: -9999px;
+            /* 將畫布置於畫面外，而非使用 display:none */
+            width: 800px;
             background: white;
             padding: 30px;
             font-family: sans-serif;
             color: black;
-            width: 800px;
+            z-index: -1;
         }
 
         #print-area-global .print-title {
@@ -695,7 +704,6 @@
 
         <div class="top-area">
             <div class="mobile-slogan" id="mobile-slogan-container"></div>
-
             <div class="settings-panel">
                 <h3>⚙️ 目前系統狀態</h3>
                 <div class="control-group">
@@ -746,13 +754,10 @@
                 </div>
             </div>
 
-            <!-- LINE 專屬警告區塊 -->
             <div id="line-browser-warning" class="line-warning-hint">
-                ⚠️ 偵測到您可能使用社群軟體瀏覽器 (LINE/FB)！<br>
-                若遇到無法下載檔案，請點擊螢幕右上角，選擇「以預設瀏覽器開啟 (Safari / Chrome)」。
+                ⚠️ 系統提醒：建議您點擊螢幕右上角，選擇「以預設瀏覽器開啟 (Safari / Chrome)」，系統會更加穩定喔！
             </div>
 
-            <!-- 更改為開啟預覽 -->
             <button class="btn-export-global" onclick="CareApp.showPreviewModal()">📄 預覽與匯出總表</button>
             <div class="export-hint">💡 點擊後可先確認內容，再選擇下載或傳送。</div>
         </div>
@@ -783,36 +788,32 @@
             </div>
         </div>
 
-        <!-- PDF 預覽與輸出 Modal -->
+        <!-- 【重大修改】極大化的預覽與輸出 Modal -->
         <div class="step-modal-overlay" id="previewModal"
             onclick="CareApp.handleModalOverlayClick(event, 'previewModal')">
             <div class="preview-modal-content">
                 <h3
-                    style="color:var(--app-primary); font-size:1.6rem; margin-bottom:0.5rem; border-bottom:2px solid var(--app-primary-light); padding-bottom:0.5rem; text-align:center;">
+                    style="color:var(--app-primary); font-size:1.4rem; margin-bottom:0.3rem; border-bottom:2px solid var(--app-primary-light); padding-bottom:0.3rem; text-align:center;">
                     📄 總表預覽</h3>
-                <p style="font-size:1.1rem; color:#64748b; text-align:center; margin-bottom:1rem;">(可左右滑動查看完整表格)</p>
+                <p style="font-size:1rem; color:#64748b; text-align:center; margin-bottom:0.5rem;">(可雙指放大縮小、左右滑動查看)</p>
 
                 <!-- 預覽內容區 -->
                 <div class="preview-scroll-area" id="previewContent">
                     <!-- 內容由 JS 產生 -->
                 </div>
 
-                <!-- 操作按鈕區 (區分下載與分享) -->
-                <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-                    <button class="btn-export-global" id="btn-action-download"
-                        onclick="CareApp.executePDFAction('download')" style="animation: none; padding: 1.2rem;">⬇️ 儲存
-                        PDF 至手機</button>
-                    <button class="btn-export-global" id="btn-action-share" onclick="CareApp.executePDFAction('share')"
-                        style="background: #0284c7; animation: none; padding: 1.2rem;">📤 分享 (傳送至 LINE 等)</button>
+                <!-- 統一且縮小的操作按鈕區 -->
+                <div class="preview-btn-group">
+                    <button class="btn-export-global" id="btn-action-export" onclick="CareApp.executePDFAction()"
+                        style="background: #0284c7; animation: none;">📤 匯出總表 (分享或下載)</button>
                     <button class="btn-delete-id" onclick="CareApp.closeModal('previewModal')"
-                        style="margin-top: 0.5rem; padding: 1rem;">❌ 發現錯誤，返回修改</button>
+                        style="background: #f8fafc; color: #475569; border-color: #cbd5e1;">❌ 返回修改</button>
                 </div>
             </div>
         </div>
-
     </div>
 
-    <!-- 實際生成 PDF 用的隱藏區塊 -->
+    <!-- 放置於畫面外側的渲染區塊，解決 PDF 白紙問題 -->
     <div id="print-area-global"></div>
 
     <script>
@@ -830,9 +831,7 @@
 
             function escapeHTML(str) {
                 if (str === null || str === undefined) return '';
-                return String(str).replace(/[&<>'"]/g, match => ({
-                    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-                }[match]));
+                return String(str).replace(/[&<>'"]/g, match => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[match]));
             }
 
             const CLINICAL_LAB_LIMITS = {
@@ -871,10 +870,7 @@
 
             function checkEmpty(val) { return val === null || val === undefined || String(val).trim() === ''; }
             function getTodayString() { const today = new Date(); return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; }
-            function checkNegativeInput(elementId) {
-                const el = getEl(elementId);
-                return (el && el.value !== '' && parseFloat(el.value) < 0);
-            }
+            function checkNegativeInput(elementId) { const el = getEl(elementId); return (el && el.value !== '' && parseFloat(el.value) < 0); }
 
             function formatLabValue(key, val) {
                 if (val === null || val === undefined || val === '-' || val === '') return '-';
@@ -892,27 +888,18 @@
                 if (dateVal) {
                     const selected = new Date(dateVal);
                     const today = new Date(getTodayString());
-                    if (selected > today) {
-                        getEl(inputId).value = getTodayString();
-                        alert("⚠️ 【日期錯誤修正】\n您選擇了未來的日期！系統已自動為您更正為「今日」。");
-                        return false;
-                    }
+                    if (selected > today) { getEl(inputId).value = getTodayString(); alert("⚠️ 【日期錯誤修正】\n您選擇了未來的日期！系統已自動為您更正為「今日」。"); return false; }
                 }
                 return true;
             }
 
-            // --- 長者友善導航彈窗 ---
             function showNextStep(title, desc, nextSect) {
                 getEl('nextStepTitle').innerText = title;
                 getEl('nextStepDesc').innerHTML = desc.replace(/\n/g, '<br>');
                 getEl('nextStepBtn').onclick = () => {
                     getEl('nextStepModal').style.display = 'none';
-                    if (nextSect === 'export') {
-                        getEl('export-area').scrollIntoView({ behavior: 'smooth', block: 'end' });
-                    } else {
-                        switchSection(nextSect);
-                        window.scrollTo(0, 0);
-                    }
+                    if (nextSect === 'export') { getEl('export-area').scrollIntoView({ behavior: 'smooth', block: 'end' }); }
+                    else { switchSection(nextSect); window.scrollTo(0, 0); }
                 };
                 getEl('nextStepModal').style.display = 'flex';
             }
@@ -922,9 +909,7 @@
                     localStorage.setItem('7c_idCardState', JSON.stringify(idCardState));
                     localStorage.setItem('7c_labRecords', JSON.stringify(labRecords));
                     localStorage.setItem('7c_seRecords', JSON.stringify(seRecords));
-                } catch (e) {
-                    console.error("LocalStorage 儲存失敗:", e);
-                }
+                } catch (e) { console.error("LocalStorage 儲存失敗:", e); }
             }
 
             function refreshSlogans() {
@@ -937,17 +922,14 @@
 
             function updateReminder() {
                 const stage = getEl('course-selector').value;
-                idCardState.courseStage = stage;
-                saveDataToLocal();
+                idCardState.courseStage = stage; saveDataToLocal();
                 const data = reminderDB[currentOncology][stage];
-                getEl('pushTitle').innerText = "今日提醒：" + data.t;
-                getEl('pushText').innerText = data.d;
+                getEl('pushTitle').innerText = "今日提醒：" + data.t; getEl('pushText').innerText = data.d;
             }
 
             function updateHistoryPanel() {
                 const allDates = new Set();
-                labRecords.forEach(r => allDates.add(r.recordDate));
-                seRecords.forEach(r => allDates.add(r.recordDate));
+                labRecords.forEach(r => allDates.add(r.recordDate)); seRecords.forEach(r => allDates.add(r.recordDate));
                 const listDiv = getEl('side-history-list');
                 if (allDates.size === 0) { listDiv.innerHTML = '<p style="color:#64748b; font-size:1.1rem;">尚無歷史紀錄。</p>'; return; }
                 const sortedDates = Array.from(allDates).sort((a, b) => new Date(b) - new Date(a));
@@ -992,8 +974,7 @@
                 let targetDate = new Date(newDateStr);
                 let pastRecords = labRecords.filter(r => {
                     if (!r.weight || isNaN(parseFloat(r.weight))) return false;
-                    let rDate = new Date(r.recordDate);
-                    return rDate < targetDate;
+                    return new Date(r.recordDate) < targetDate;
                 });
 
                 if (pastRecords.length === 0) return null;
@@ -1007,11 +988,8 @@
                 let daysDiff = (targetDate - new Date(lastValidRecord.recordDate)) / (1000 * 60 * 60 * 24);
 
                 if (daysDiff > 0 && lossPercent > 0) {
-                    if (daysDiff <= 7 && lossPercent >= 2.0) {
-                        alert(`⚖️【體重流失警訊】\n您在 ${daysDiff} 天內體重減輕了 ${lossPercent.toFixed(1)}%！\n建議主動尋求營養師諮詢。`);
-                    } else if (lossPercent >= 5.0) {
-                        alert(`⚖️【體重流失警訊】\n較前次紀錄，您的體重已減輕 ${lossPercent.toFixed(1)}%！\n請持續追蹤體重變化。`);
-                    }
+                    if (daysDiff <= 7 && lossPercent >= 2.0) { alert(`⚖️【體重流失警訊】\n您在 ${daysDiff} 天內體重減輕了 ${lossPercent.toFixed(1)}%！\n建議主動尋求營養師諮詢。`); }
+                    else if (lossPercent >= 5.0) { alert(`⚖️【體重流失警訊】\n較前次紀錄，您的體重已減輕 ${lossPercent.toFixed(1)}%！\n請持續追蹤體重變化。`); }
                 }
                 return lossPercent;
             }
@@ -1021,23 +999,13 @@
                 for (let key in CLINICAL_LAB_LIMITS) {
                     if (!record[key] || record[key] === '-') continue;
                     let v = parseFloat(record[key]), cfg = CLINICAL_LAB_LIMITS[key];
-
-                    if (cfg.panicMin !== null && v <= cfg.panicMin) {
-                        panicMessages.push(`🚨【危急】${cfg.name} 極低 (${v})`);
-                    } else if (cfg.panicMax !== null && v >= cfg.panicMax) {
-                        panicMessages.push(`🚨【危急】${cfg.name} 極高 (${v})`);
-                    } else if (cfg.min !== null && v < cfg.min) {
-                        alertMessages.push(`⚠️ ${cfg.name} 偏低 (${v})，正常應為 ${cfg.min} 以上`);
-                    } else if (cfg.max !== null && v > cfg.max) {
-                        alertMessages.push(`⚠️ ${cfg.name} 偏高 (${v})，正常應在 ${cfg.max} 以下`);
-                    }
+                    if (cfg.panicMin !== null && v <= cfg.panicMin) { panicMessages.push(`🚨【危急】${cfg.name} 極低 (${v})`); }
+                    else if (cfg.panicMax !== null && v >= cfg.panicMax) { panicMessages.push(`🚨【危急】${cfg.name} 極高 (${v})`); }
+                    else if (cfg.min !== null && v < cfg.min) { alertMessages.push(`⚠️ ${cfg.name} 偏低 (${v})，正常應為 ${cfg.min} 以上`); }
+                    else if (cfg.max !== null && v > cfg.max) { alertMessages.push(`⚠️ ${cfg.name} 偏高 (${v})，正常應在 ${cfg.max} 以下`); }
                 }
-
-                if (panicMessages.length > 0) {
-                    alert("🛑🛑【危急值警示】🛑🛑\n\n" + panicMessages.join("\n") + "\n\n請務必「盡快就醫」或聯絡護理站！");
-                } else if (alertMessages.length > 0) {
-                    alert("📋【數值提醒】\n\n" + alertMessages.join("\n") + "\n\n部分數值偏離正常，請於下次門診時與醫師討論。");
-                }
+                if (panicMessages.length > 0) { alert("🛑🛑【危急值警示】🛑🛑\n\n" + panicMessages.join("\n") + "\n\n請務必「盡快就醫」或聯絡護理站！"); }
+                else if (alertMessages.length > 0) { alert("📋【數值提醒】\n\n" + alertMessages.join("\n") + "\n\n部分數值偏離正常，請於下次門診時與醫師討論。"); }
             }
 
             function loadData() {
@@ -1045,37 +1013,19 @@
                     idCardState = JSON.parse(localStorage.getItem('7c_idCardState')) || {};
                     labRecords = JSON.parse(localStorage.getItem('7c_labRecords')) || [];
                     seRecords = JSON.parse(localStorage.getItem('7c_seRecords')) || [];
-                } catch (e) {
-                    console.error("資料讀取失敗，為您重新設定。");
-                    idCardState = {}; labRecords = []; seRecords = [];
-                }
+                } catch (e) { console.error("資料讀取失敗，為您重新設定。"); idCardState = {}; labRecords = []; seRecords = []; }
                 if (idCardState.lockedOncology) currentOncology = idCardState.lockedOncology;
             }
 
             function init() {
-                window.scrollTo(0, 0);
-                loadData();
-                refreshSlogans();
-                setInterval(refreshSlogans, 3600000);
-
-                if (idCardState.courseStage) {
-                    let selector = getEl('course-selector');
-                    if (selector) selector.value = idCardState.courseStage;
-                }
-
-                if (isLineApp()) {
-                    getEl('line-browser-warning').style.display = 'block';
-                }
-
-                checkLockedOncology();
-                switchSection('report');
-                updateHistoryPanel();
+                window.scrollTo(0, 0); loadData(); refreshSlogans(); setInterval(refreshSlogans, 3600000);
+                if (idCardState.courseStage) { let selector = getEl('course-selector'); if (selector) selector.value = idCardState.courseStage; }
+                if (isLineApp()) { getEl('line-browser-warning').style.display = 'block'; }
+                checkLockedOncology(); switchSection('report'); updateHistoryPanel();
             }
 
             function switchOncology(type, fromIDCard = false) {
-                if (idCardState.lockedOncology && type !== idCardState.lockedOncology) {
-                    alert("⚠️ 癌別已鎖定。若需更改，請至「身分證」最下方點選「刪除身分證並解除鎖定」。"); return;
-                }
+                if (idCardState.lockedOncology && type !== idCardState.lockedOncology) { alert("⚠️ 癌別已鎖定。若需更改，請至「身分證」最下方點選「刪除身分證並解除鎖定」。"); return; }
                 currentOncology = type; checkLockedOncology();
                 if (currentSection === 'report') {
                     const typeSelect = getEl('id-type');
@@ -1271,7 +1221,6 @@
             function renderLinksSection() {
                 const cancer = escapeHTML(idCardState.site) || '尚未設定癌別';
                 const stage = escapeHTML(idCardState.stage) || '尚未設定期別';
-
                 let eduContent = `
                     <div style="background:#f0f9ff; border:1px solid #bae6fd; padding:1.2rem; border-radius:12px; margin-bottom:1rem;">
                         <h4 style="color:var(--app-accent); font-size:1.3rem; margin-bottom:0.5rem;">📖 專屬衛教資訊</h4>
@@ -1281,7 +1230,6 @@
                         <a href="https://love-newlife.org/" target="_blank" class="btn-link" style="background:#0369a1;">中華民國癌友新生命協會</a>
                     </div>
                 `;
-
                 getEl('mainContent').innerHTML = `
                     <div class="info-panel">
                         <div class="info-title">🔗 常用資源</div>
@@ -1295,17 +1243,9 @@
 
             function saveIdCard() {
                 if (!validateDateGuard('id-date')) return;
-                if (checkNegativeInput('id-size') || checkNegativeInput('id-lymph-total') || checkNegativeInput('id-lymph-inf')) {
-                    return alert("⚠️ 數值不可為負數，請重新確認！");
-                }
-
+                if (checkNegativeInput('id-size') || checkNegativeInput('id-lymph-total') || checkNegativeInput('id-lymph-inf')) { return alert("⚠️ 數值不可為負數，請重新確認！"); }
                 let siteVal = getEl('id-site').value;
-                if (siteVal === '其他') {
-                    let other = getEl('id-site-other').value;
-                    if (checkEmpty(other)) return alert("⚠️ 請填寫癌症部位！");
-                    siteVal = other;
-                }
-
+                if (siteVal === '其他') { let other = getEl('id-site-other').value; if (checkEmpty(other)) return alert("⚠️ 請填寫癌症部位！"); siteVal = other; }
                 if (checkEmpty(getEl('id-type').value)) return alert("⚠️ 請選擇癌細胞型態！");
                 if (checkEmpty(getEl('id-size').value)) return alert("⚠️ 請填寫大小！");
                 if (checkEmpty(getEl('id-stage').value)) return alert("⚠️ 請選擇期別！");
@@ -1322,67 +1262,42 @@
                 } else { metaSiteVal = ''; }
 
                 idCardState = {
-                    date: getEl('id-date').value || getTodayString(),
-                    site: siteVal, siteRaw: getEl('id-site').value,
-                    type: getEl('id-type').value, size: getEl('id-size').value,
-                    stage: getEl('id-stage').value, grade: getEl('id-grade').value,
-                    ki67: getEl('id-ki67').value,
-                    lymph: lymphStr, lymphRaw: getEl('id-lymph').value, lymphTotal, lymphInf,
-                    meta: metaRaw === '有' ? `有 (部位: ${metaSiteVal})` : metaRaw, metaRaw,
-                    metaSiteRaw: getEl('id-meta-site').value === '其他' ? metaOtherVal : getEl('id-meta-site').value,
-                    lockedOncology: currentOncology
+                    date: getEl('id-date').value || getTodayString(), site: siteVal, siteRaw: getEl('id-site').value, type: getEl('id-type').value, size: getEl('id-size').value,
+                    stage: getEl('id-stage').value, grade: getEl('id-grade').value, ki67: getEl('id-ki67').value,
+                    lymph: lymphStr, lymphRaw: getEl('id-lymph').value, lymphTotal, lymphInf, meta: metaRaw === '有' ? `有 (部位: ${metaSiteVal})` : metaRaw, metaRaw,
+                    metaSiteRaw: getEl('id-meta-site').value === '其他' ? metaOtherVal : getEl('id-meta-site').value, lockedOncology: currentOncology
                 };
-
-                saveDataToLocal(); checkLockedOncology();
-                showNextStep('💾 身分證儲存成功！', '接下來為您跳轉至「抽血與體重」紀錄。', 'lab');
+                saveDataToLocal(); checkLockedOncology(); showNextStep('💾 身分證儲存成功！', '接下來為您跳轉至「抽血與體重」紀錄。', 'lab');
             }
 
             function deleteIdCard() {
                 if (confirm("🚨【警告】確定要刪除身分證資料並解除鎖定嗎？\n⚠️ 這將會「清除」您過往所有的紀錄！")) {
-                    idCardState = {}; currentOncology = 'breast';
-                    labRecords = []; seRecords = [];
-                    localStorage.removeItem('7c_idCardState');
-                    localStorage.removeItem('7c_labRecords');
-                    localStorage.removeItem('7c_seRecords');
+                    idCardState = {}; currentOncology = 'breast'; labRecords = []; seRecords = [];
+                    localStorage.removeItem('7c_idCardState'); localStorage.removeItem('7c_labRecords'); localStorage.removeItem('7c_seRecords');
                     checkLockedOncology(); updateHistoryPanel();
-                    const courseSelector = getEl('course-selector');
-                    if (courseSelector) courseSelector.value = 'stage1';
-                    alert("✅ 身分證與歷史紀錄已刪除。");
-                    renderReportSection(); window.scrollTo(0, 0);
+                    const courseSelector = getEl('course-selector'); if (courseSelector) courseSelector.value = 'stage1';
+                    alert("✅ 身分證與歷史紀錄已刪除。"); renderReportSection(); window.scrollTo(0, 0);
                 }
             }
 
             function saveLabData() {
                 if (!validateDateGuard('lab-date')) return;
-
                 const allNumberFields = ['input-weight', 'input-wbc', 'input-anc', 'input-hb', 'input-plt', 'input-got', 'input-gpt', 'input-bun', 'input-cr', 'input-cea', 'input-ca153', 'input-ca125', 'input-ca199', 'input-ldh', 'input-alp', 'input-afp', 'input-psa', 'input-cga', 'input-bhcg'];
                 let hasNegative = false; let hasValue = false;
-
-                allNumberFields.forEach(id => {
-                    const el = getEl(id);
-                    if (!checkEmpty(el.value)) {
-                        hasValue = true; if (parseFloat(el.value) < 0) hasNegative = true;
-                    }
-                });
-
+                allNumberFields.forEach(id => { const el = getEl(id); if (!checkEmpty(el.value)) { hasValue = true; if (parseFloat(el.value) < 0) hasNegative = true; } });
                 if (hasNegative) return alert("⚠️ 數值不可為負數，請重新確認！");
                 if (!hasValue) return alert("⚠️ 請至少填寫一項數值！");
 
                 let weightVal = getEl('input-weight').value, dateVal = getEl('lab-date').value || getTodayString();
                 let lossPercent = calculateWeightLoss(weightVal, dateVal);
-
                 let newRecord = { recordDate: dateVal, weight: weightVal };
                 if (lossPercent !== null) {
-                    if (lossPercent > 0) { newRecord.weightLossMsg = `較前次減輕 ${lossPercent.toFixed(1)}%`; }
-                    else if (lossPercent < 0) { newRecord.weightLossMsg = `較前次增加 ${Math.abs(lossPercent).toFixed(1)}%`; }
+                    if (lossPercent > 0) { newRecord.weightLossMsg = `較前次減輕 ${lossPercent.toFixed(1)}%`; } else if (lossPercent < 0) { newRecord.weightLossMsg = `較前次增加 ${Math.abs(lossPercent).toFixed(1)}%`; }
                 }
-
                 ['wbc', 'hb', 'cea', 'ca153', 'anc', 'plt', 'got', 'gpt', 'bun', 'cr', 'ldh', 'alp', 'ca125', 'ca199', 'afp', 'psa', 'bhcg', 'cga'].forEach(k => newRecord[k] = getEl(`input-${k}`).value);
-
                 checkLabAlerts(newRecord);
                 labRecords.push(newRecord); labRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
-                saveDataToLocal(); updateHistoryPanel();
-                showNextStep('💾 抽血數值儲存成功！', '接下來為您跳轉至「副作用」紀錄。', 'se');
+                saveDataToLocal(); updateHistoryPanel(); showNextStep('💾 抽血數值儲存成功！', '接下來為您跳轉至「副作用」紀錄。', 'se');
             }
 
             function saveSeData() {
@@ -1391,35 +1306,27 @@
                 if (sev === '嚴重 (需就醫)' && !confirm("🚨 確定儲存「嚴重」症狀？請務必『盡快就醫』或聯絡護理站！")) return;
                 let sympVal = getEl('se-symp').value;
                 if (sympVal === '其他') { let other = getEl('se-symp-other').value; if (checkEmpty(other)) return alert("⚠️ 請填寫症狀！"); sympVal = other; }
-
                 seRecords.push({ recordDate: getEl('se-date').value || getTodayString(), symp: sympVal, sev: sev, notes: getEl('se-notes').value });
                 seRecords.sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
-                saveDataToLocal(); updateHistoryPanel();
-
-                renderSeSection();
+                saveDataToLocal(); updateHistoryPanel(); renderSeSection();
                 showNextStep('💾 副作用儲存成功！', '今日紀錄已全部完成。\n點擊按鈕為您跳轉至最下方「匯出總表」區塊。', 'export');
             }
 
             function showDailyReport(dateStr) {
                 getEl('modalDateTitle').innerText = `${escapeHTML(dateStr)} 健康紀錄`;
                 let html = '';
-                let dLab = labRecords.filter(r => r.recordDate === dateStr);
-                let dSe = seRecords.filter(r => r.recordDate === dateStr);
-
+                let dLab = labRecords.filter(r => r.recordDate === dateStr); let dSe = seRecords.filter(r => r.recordDate === dateStr);
                 if (dLab.length) { html += `<div style="margin-bottom:1rem;"><h4 style="color:#0284c7; margin-bottom:0.5rem;">🩸 數值與體重</h4><ul style="padding-left:1.2rem;">` + dLab.map(r => `<li>體重: ${escapeHTML(r.weight) || '-'} / WBC: ${escapeHTML(r.wbc) || '-'} / Hb: ${escapeHTML(r.hb) || '-'}</li>`).join('') + `</ul></div>`; }
                 if (dSe.length) { html += `<div><h4 style="color:#0284c7; margin-bottom:0.5rem;">🤢 副作用</h4><ul style="padding-left:1.2rem;">` + dSe.map(r => `<li>[${escapeHTML(r.sev)}] ${escapeHTML(r.symp)}</li>`).join('') + `</ul></div>`; }
-
-                getEl('modalBody').innerHTML = html || '<p>當日無詳細紀錄。</p>';
-                getEl('dailyModal').style.display = 'flex';
+                getEl('modalBody').innerHTML = html || '<p>當日無詳細紀錄。</p>'; getEl('dailyModal').style.display = 'flex';
             }
 
             function closeModal(modalId) { getEl(modalId).style.display = 'none'; }
             function handleModalOverlayClick(event, modalId) { if (event.target.id === modalId) closeModal(modalId); }
 
-            // --- 總表預覽與 HTML 生成邏輯 ---
+            // --- 總表 HTML 生成 ---
             function generatePrintHTML() {
                 let html = `<div class="print-title">台東馬偕 7C 腫瘤護照總表</div>`;
-
                 html += `<div class="print-section"><div class="print-section-title">🪪 癌症身分證</div>`;
                 if (idCardState.site) {
                     html += `<table class="print-table info-table">
@@ -1432,14 +1339,13 @@
 
                 if (labRecords.length) {
                     let sortedLabs = [...labRecords].sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate));
-                    html += `<div class="print-section"><div class="print-section-title">🩸 抽血與腫瘤指數趨勢表</div><div style="overflow-x:auto;"><table class="print-table"><tr><th>項目 \\ 日期</th>`;
+                    html += `<div class="print-section"><div class="print-section-title">🩸 抽血與腫瘤指數趨勢表</div><table class="print-table"><tr><th>項目 \\ 日期</th>`;
                     sortedLabs.forEach(r => html += `<th>${escapeHTML(r.recordDate)}</th>`);
                     html += `</tr><tr><th>體重 (kg)</th>`;
                     sortedLabs.forEach(r => {
                         let weightDisplay = escapeHTML(r.weight) || '-';
                         if (r.weightLossMsg) {
-                            let isGain = r.weightLossMsg.includes('增加');
-                            let color = isGain ? '#16a34a' : '#dc2626';
+                            let color = r.weightLossMsg.includes('增加') ? '#16a34a' : '#dc2626';
                             weightDisplay += `<br><span style="color:${color};font-size:10px;">(${escapeHTML(r.weightLossMsg)})</span>`;
                         }
                         html += `<td>${weightDisplay}</td>`;
@@ -1447,8 +1353,7 @@
                     html += `</tr>`;
                     const labKeys = ['wbc', 'anc', 'hb', 'plt', 'got', 'gpt', 'bun', 'cr', 'cea', 'ca153', 'ca125', 'ca199', 'ldh', 'alp', 'afp', 'psa', 'cga', 'bhcg'];
                     labKeys.forEach(k => {
-                        let hasData = sortedLabs.some(r => r[k]);
-                        if (hasData) {
+                        if (sortedLabs.some(r => r[k])) {
                             let cfg = CLINICAL_LAB_LIMITS[k];
                             let hint = cfg.max ? `(${cfg.min || '0'}~${cfg.max})` : (cfg.min ? `(>${cfg.min})` : '');
                             html += `<tr><th>${escapeHTML(cfg.name)}<br><span style="font-size:10px;font-weight:normal;">${escapeHTML(hint)}</span></th>`;
@@ -1456,114 +1361,93 @@
                             html += `</tr>`;
                         }
                     });
-                    html += `</table></div></div>`;
+                    html += `</table></div>`;
                 }
 
                 if (seRecords.length) {
-                    html += `<div class="print-section"><div class="print-section-title">🤢 副作用紀錄</div><div style="overflow-x:auto;"><table class="print-table"><tr><th>日期</th><th>症狀</th><th>嚴重程度</th><th>備註/處置</th></tr>`;
+                    html += `<div class="print-section"><div class="print-section-title">🤢 副作用紀錄</div><table class="print-table"><tr><th>日期</th><th>症狀</th><th>嚴重程度</th><th>備註/處置</th></tr>`;
                     seRecords.forEach(r => html += `<tr><td>${escapeHTML(r.recordDate)}</td><td>${escapeHTML(r.symp)}</td><td>${escapeHTML(r.sev)}</td><td>${escapeHTML(r.notes) || '-'}</td></tr>`);
-                    html += `</table></div></div>`;
+                    html += `</table></div>`;
                 }
-
                 html += `<div class="print-disclaimer">此報告由病患自主紀錄，僅供醫療團隊參考評估使用。列印時間：${new Date().toLocaleString('zh-TW')}</div>`;
                 return html;
             }
 
-            // 打開預覽視窗
             function showPreviewModal() {
                 const html = generatePrintHTML();
-                getEl('previewContent').innerHTML = html;
-
-                // 為了讓預覽視窗內的表格不要超出邊界，做一點 CSS 微調
-                const tables = getEl('previewContent').querySelectorAll('.print-table');
-                tables.forEach(t => t.style.minWidth = '500px'); // 強制讓橫向滾動生效
-
+                // 設定最小寬度，讓表格不會在預覽時擠在一團，可左右滑動
+                getEl('previewContent').innerHTML = `<div style="min-width: 700px; padding: 15px; font-family: sans-serif; color: black; background: white;">${html}</div>`;
                 getEl('previewModal').style.display = 'flex';
             }
 
-            // 執行下載或分享
-            function executePDFAction(actionType) {
-                const btnD = getEl('btn-action-download');
-                const btnS = getEl('btn-action-share');
-
-                btnD.disabled = true; btnS.disabled = true;
-                if (actionType === 'download') btnD.innerText = "⏳ 檔案準備中...";
-                if (actionType === 'share') btnS.innerText = "⏳ 檔案準備中...";
+            function executePDFAction() {
+                const btn = getEl('btn-action-export');
+                const originalText = btn.innerText;
+                btn.disabled = true;
+                btn.innerText = "⏳ 檔案準備中...";
 
                 let pa = getEl('print-area-global');
                 pa.innerHTML = generatePrintHTML();
-                pa.style.display = 'block';
 
-                const opt = {
-                    margin: 10,
-                    filename: '7C腫瘤護照總表.pdf',
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
+                // 稍微延遲讓瀏覽器有時間將隱藏區塊的 DOM 畫好再截圖
+                setTimeout(() => {
+                    const opt = {
+                        margin: 10, filename: '7C腫瘤護照總表.pdf',
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true, logging: false },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    };
 
-                html2pdf().set(opt).from(pa).output('blob').then(function (pdfBlob) {
-                    pa.style.display = 'none';
-                    resetButtons();
+                    html2pdf().set(opt).from(pa).output('blob').then(function (pdfBlob) {
+                        btn.disabled = false;
+                        btn.innerText = originalText;
 
-                    const file = new File([pdfBlob], "7C腫瘤護照總表.pdf", { type: 'application/pdf' });
+                        const file = new File([pdfBlob], "7C腫瘤護照總表.pdf", { type: 'application/pdf' });
 
-                    if (actionType === 'share') {
-                        // 如果支援原生分享功能 (iOS/Android 預設瀏覽器)
+                        // 嘗試使用原生分享
                         if (navigator.canShare && navigator.canShare({ files: [file] })) {
                             navigator.share({
-                                files: [file],
-                                title: '7C腫瘤護照總表',
-                                text: '這是我近期的7C腫瘤護照紀錄，請參考。'
+                                files: [file], title: '7C腫瘤護照總表', text: '這是我近期的7C腫瘤護照紀錄，請參考。'
                             }).catch((error) => console.log('分享已取消或失敗:', error));
                         } else {
-                            // 不支援分享時，退回下載功能
-                            alert("⚠️ 您的裝置或瀏覽器不支援直接分享檔案 (可能在 LINE 內部)。\n已自動為您切換為「下載儲存」。");
+                            // 降級為強制下載
                             triggerCrossPlatformDownload(pdfBlob);
                         }
-                    } else {
-                        // 直接下載
-                        triggerCrossPlatformDownload(pdfBlob);
-                    }
-                }).catch(function (err) {
-                    pa.style.display = 'none';
-                    resetButtons();
-                    alert("⚠️ PDF 產生失敗，請確認您的網路連線或儲存空間。");
-                    console.error(err);
-                });
-
-                function resetButtons() {
-                    btnD.disabled = false; btnS.disabled = false;
-                    btnD.innerText = "⬇️ 儲存 PDF 至手機";
-                    btnS.innerText = "📤 分享 (傳送至 LINE 等)";
-                }
+                    }).catch(function (err) {
+                        btn.disabled = false;
+                        btn.innerText = originalText;
+                        alert("⚠️ PDF 產生失敗，請確認手機空間或網路連線。");
+                        console.error(err);
+                    });
+                }, 300);
             }
 
-            // 強健的跨平台 JS 下載邏輯
+            // 【重大修改】改用 Base64 下載法，最不容易被內建瀏覽器擋下
             function triggerCrossPlatformDownload(blob) {
                 try {
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = '7C腫瘤護照總表.pdf';
-                    document.body.appendChild(a);
-                    a.click();
-                    setTimeout(() => {
-                        window.URL.revokeObjectURL(url);
-                        document.body.removeChild(a);
-                    }, 200);
+                    const reader = new FileReader();
+                    reader.readAsDataURL(blob);
+                    reader.onloadend = function () {
+                        const base64data = reader.result;
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = base64data;
+                        a.download = '7C腫瘤護照總表.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        setTimeout(() => { document.body.removeChild(a); }, 200);
+                    };
                 } catch (e) {
-                    alert("⚠️ 檔案下載失敗，請嘗試點擊畫面右上角「以 Safari 或 Chrome 開啟」。");
-                    console.error("Blob download failed:", e);
+                    alert("⚠️ 您的瀏覽器阻擋了下載，建議點擊右上角「以 Safari 或 Chrome 開啟」後再試。");
+                    console.error("Download failed:", e);
                 }
             }
 
             return {
-                init, switchOncology, updateReminder, switchSection,
-                handleSiteChange, saveIdCard, deleteIdCard, saveLabData,
-                saveSeData, deleteRecord, showDailyReport, closeModal,
-                handleModalOverlayClick, showPreviewModal, executePDFAction
+                init, switchOncology, updateReminder, switchSection, handleSiteChange,
+                saveIdCard, deleteIdCard, saveLabData, saveSeData, deleteRecord,
+                showDailyReport, closeModal, handleModalOverlayClick,
+                showPreviewModal, executePDFAction
             };
         })();
 
