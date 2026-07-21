@@ -19,7 +19,6 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            /* 針對長者優化：基礎字體放大，確保不需戴老花眼鏡也能輕鬆閱讀 */
             font-size: 1.15rem;
             -webkit-tap-highlight-color: transparent;
         }
@@ -269,7 +268,6 @@
             outline: none;
             background: #f8fafc;
             transition: border-color 0.2s;
-            /* 避免 iOS 縮放 */
             min-height: 48px;
         }
 
@@ -311,7 +309,6 @@
             border-top: 1px solid #cbd5e1;
         }
 
-        /* 溫馨關懷標語 (移至底部) */
         .bottom-slogan {
             background: rgba(255, 255, 255, 0.95);
             padding: 1rem;
@@ -408,7 +405,7 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
         }
 
-        /* --- 歷史紀錄卡片 (補回詳細資訊預覽與點擊) --- */
+        /* --- 歷史紀錄卡片 --- */
         .history-card {
             background: white;
             border: 2px solid #e2e8f0;
@@ -486,7 +483,7 @@
             margin-bottom: 2rem;
         }
 
-        /* --- 彈出視窗 Modal (補回歷史詳細資料彈窗) --- */
+        /* --- 彈出視窗 Modal --- */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -584,7 +581,7 @@
             }
         }
 
-        /* --- 列印排版 (補回完整的表格) --- */
+        /* --- 列印排版 --- */
         #print-area-global {
             display: none;
         }
@@ -741,7 +738,7 @@
                 </div>
             </div>
 
-            <!-- 溫馨關懷標語移至此處，不影響操作流程 -->
+            <!-- 溫馨關懷標語移至此處 -->
             <div class="bottom-slogan" id="mobile-slogan-container"></div>
 
             <button class="btn-export-global" onclick="CareApp.prepareAndPrint()">🖨️ 匯出給醫師看的報告 (PDF)</button>
@@ -755,7 +752,7 @@
         <button class="btn-next-step" id="transitionNextBtn">繼續下一步驟</button>
     </div>
 
-    <!-- 歷史詳細資料彈窗 (補回) -->
+    <!-- 歷史詳細資料彈窗 -->
     <div class="modal-overlay" id="dailyModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -813,9 +810,12 @@
             }
 
             function loadData() {
-                idCardState = JSON.parse(localStorage.getItem('7c_idCardState')) || {};
-                labRecords = JSON.parse(localStorage.getItem('7c_labRecords')) || [];
-                seRecords = JSON.parse(localStorage.getItem('7c_seRecords')) || [];
+                try { idCardState = JSON.parse(localStorage.getItem('7c_idCardState')) || {}; } catch (e) { idCardState = {}; }
+                try { labRecords = JSON.parse(localStorage.getItem('7c_labRecords')) || []; } catch (e) { labRecords = []; }
+                try { seRecords = JSON.parse(localStorage.getItem('7c_seRecords')) || []; } catch (e) { seRecords = []; }
+
+                if (!Array.isArray(labRecords)) labRecords = [];
+                if (!Array.isArray(seRecords)) seRecords = [];
 
                 if (idCardState.lockedOncology) {
                     currentOncology = idCardState.lockedOncology;
@@ -824,26 +824,27 @@
             }
 
             function saveDataToLocal() {
-                localStorage.setItem('7c_idCardState', JSON.stringify(idCardState));
-                localStorage.setItem('7c_labRecords', JSON.stringify(labRecords));
-                localStorage.setItem('7c_seRecords', JSON.stringify(seRecords));
+                try {
+                    localStorage.setItem('7c_idCardState', JSON.stringify(idCardState));
+                    localStorage.setItem('7c_labRecords', JSON.stringify(labRecords));
+                    localStorage.setItem('7c_seRecords', JSON.stringify(seRecords));
+                } catch (e) { console.error(e); }
             }
 
             function validateDateGuard(inputId) {
-                const dateVal = document.getElementById(inputId).value;
-                if (dateVal) {
-                    const selected = new Date(dateVal);
+                const dateEl = document.getElementById(inputId);
+                if (dateEl && dateEl.value) {
+                    const selected = new Date(dateEl.value);
                     const today = new Date(getTodayString());
                     if (selected > today) {
                         alert("⚠️ 【日期錯誤】\n您選擇的日期大於今日!\n請重新填寫正確的過往或當前日期。");
-                        document.getElementById(inputId).value = getTodayString();
+                        dateEl.value = getTodayString();
                         return false;
                     }
                 }
                 return true;
             }
 
-            // 更新溫馨標語
             function refreshSlogans() {
                 const container = document.getElementById('mobile-slogan-container');
                 if (!container) return;
@@ -858,14 +859,22 @@
             }
 
             function updateReminder() {
-                const stage = document.getElementById('course-selector').value;
-                let cancerCategory = ['breast', 'lung', 'colorectal'].includes(currentOncology) ? currentOncology : 'other';
-                const data = reminderDB[cancerCategory][stage];
-                document.getElementById('pushTitle').innerText = "今日提醒：" + data.t;
-                document.getElementById('pushText').innerText = data.d;
+                try {
+                    const courseSelector = document.getElementById('course-selector');
+                    if (!courseSelector) return;
+                    const stage = courseSelector.value;
+                    let cancerCategory = ['breast', 'lung', 'colorectal'].indexOf(currentOncology) !== -1 ? currentOncology : 'other';
+                    const data = reminderDB[cancerCategory] && reminderDB[cancerCategory][stage] ? reminderDB[cancerCategory][stage] : reminderDB['other']['stage1'];
+
+                    const titleEl = document.getElementById('pushTitle');
+                    const textEl = document.getElementById('pushText');
+                    if (titleEl) titleEl.innerText = "今日提醒：" + (data ? data.t : "");
+                    if (textEl) textEl.innerText = data ? data.d : "";
+                } catch (e) {
+                    console.error(e);
+                }
             }
 
-            // 頂部癌別切換連動
             function switchOncology(type) {
                 if (idCardState.lockedOncology && type !== idCardState.lockedOncology) {
                     alert("⚠️ 您的癌別已建檔鎖定。\n若需更改，請至選單「身分證」最下方點選「刪除身分證並重新填寫」。");
@@ -873,14 +882,16 @@
                 }
                 currentOncology = type;
                 document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById(`tab-${type}`).classList.add('active');
+                const targetBtn = document.getElementById(`tab-${type}`);
+                if (targetBtn) targetBtn.classList.add('active');
 
                 const otherContainer = document.getElementById('top-other-container');
                 if (type === 'other') {
-                    otherContainer.style.display = 'block';
-                    if (otherCancerName) document.getElementById('top-other-input').value = otherCancerName;
+                    if (otherContainer) otherContainer.style.display = 'block';
+                    const otherInput = document.getElementById('top-other-input');
+                    if (otherInput && otherCancerName) otherInput.value = otherCancerName;
                 } else {
-                    otherContainer.style.display = 'none';
+                    if (otherContainer) otherContainer.style.display = 'none';
                 }
 
                 if (currentSection === 'report') renderReportSection();
@@ -892,17 +903,24 @@
                 if (currentSection === 'report') renderReportSection();
             }
 
-            // 更新歷史面板 (恢復點擊功能)
             function updateHistoryPanel() {
-                const allDates = new Set();
-                labRecords.forEach(r => allDates.add(r.recordDate));
-                seRecords.forEach(r => allDates.add(r.recordDate));
+                try {
+                    const allDatesObj = {};
+                    labRecords.forEach(r => allDatesObj[r.recordDate] = true);
+                    seRecords.forEach(r => allDatesObj[r.recordDate] = true);
+                    const allDates = Object.keys(allDatesObj);
 
-                const listDiv = document.getElementById('side-history-list');
-                if (allDates.size === 0) { listDiv.innerHTML = '<p style="color:#64748b; font-size:1.1rem;">尚無歷史紀錄。</p>'; return; }
+                    const listDiv = document.getElementById('side-history-list');
+                    if (!listDiv) return;
 
-                const sortedDates = Array.from(allDates).sort((a, b) => new Date(b) - new Date(a));
-                listDiv.innerHTML = sortedDates.map(date => `<button class="btn-link" style="background:#e0f2fe; color:#0369a1; padding: 1rem; font-size: 1.2rem;" onclick="CareApp.showDailyReport('${date}')">📅 ${date} 總表</button>`).join('');
+                    if (allDates.length === 0) {
+                        listDiv.innerHTML = '<p style="color:#64748b; font-size:1.1rem;">尚無歷史紀錄。</p>';
+                        return;
+                    }
+
+                    const sortedDates = allDates.sort((a, b) => new Date(b) - new Date(a));
+                    listDiv.innerHTML = sortedDates.map(date => `<button class="btn-link" style="background:#e0f2fe; color:#0369a1; padding: 1rem; font-size: 1.2rem;" onclick="CareApp.showDailyReport('${date}')">📅 ${date} 總表</button>`).join('');
+                } catch (e) { console.error(e); }
             }
 
             function getCellTypeOptions() {
@@ -912,68 +930,103 @@
                 return `<option value="其他">其他 (請與醫師確認)</option>`;
             }
 
+            function handleSiteChange(site) {
+                const isOther = ['乳癌', '肺癌', '大腸癌'].indexOf(site) === -1;
+                const container = document.getElementById('site-other-container');
+                if (container) container.style.display = isOther ? 'block' : 'none';
+
+                if (site === '乳癌') currentOncology = 'breast';
+                else if (site === '肺癌') currentOncology = 'lung';
+                else if (site === '大腸癌') currentOncology = 'colorectal';
+                else currentOncology = 'other';
+
+                const typeSelect = document.getElementById('id-type');
+                if (typeSelect) {
+                    typeSelect.innerHTML = `<option value="">請選擇...</option>` + (site ? getCellTypeOptions() : '');
+                }
+                updateReminder();
+            }
+
             function showTransition(message, nextSectionAction) {
                 const overlay = document.getElementById('transitionOverlay');
                 const msgBox = document.getElementById('transitionMessage');
                 const btn = document.getElementById('transitionNextBtn');
-                msgBox.innerText = message;
-                overlay.style.display = 'flex';
-                btn.onclick = () => {
-                    overlay.style.display = 'none';
-                    nextSectionAction();
-                };
+                if (msgBox) msgBox.innerText = message;
+                if (overlay) overlay.style.display = 'flex';
+                if (btn) {
+                    btn.onclick = () => {
+                        overlay.style.display = 'none';
+                        nextSectionAction();
+                    };
+                }
             }
 
             function init() {
-                window.scrollTo(0, 0);
-                loadData();
-                refreshSlogans();
-                setInterval(refreshSlogans, 3600000);
+                try {
+                    window.scrollTo(0, 0);
+                    loadData();
+                    refreshSlogans();
+                    setInterval(refreshSlogans, 3600000);
 
-                // 初始按鈕狀態鎖定
-                if (idCardState.lockedOncology) {
-                    document.querySelectorAll('.tab-btn').forEach(btn => {
-                        if (btn.id !== 'tab-' + idCardState.lockedOncology) {
-                            btn.disabled = true;
-                        } else {
-                            btn.classList.add('active');
+                    if (idCardState.lockedOncology) {
+                        document.querySelectorAll('.tab-btn').forEach(btn => {
+                            if (btn.id !== 'tab-' + idCardState.lockedOncology) {
+                                btn.disabled = true;
+                            } else {
+                                btn.classList.add('active');
+                            }
+                        });
+                        if (idCardState.lockedOncology === 'other') {
+                            const otherContainer = document.getElementById('top-other-container');
+                            const otherInput = document.getElementById('top-other-input');
+                            if (otherContainer) otherContainer.style.display = 'block';
+                            if (otherInput) {
+                                otherInput.value = otherCancerName;
+                                otherInput.disabled = true;
+                            }
                         }
-                    });
-                    if (idCardState.lockedOncology === 'other') {
-                        document.getElementById('top-other-container').style.display = 'block';
-                        document.getElementById('top-other-input').value = otherCancerName;
-                        document.getElementById('top-other-input').disabled = true;
                     }
+                    updateReminder();
+                    updateHistoryPanel();
+                    switchSection('report');
+                } catch (e) {
+                    console.error(e);
+                    alert("系統載入發生異常，請確認瀏覽器版本或清除快取後重試。");
                 }
-
-                updateReminder();
-                updateHistoryPanel();
-                switchSection('report');
             }
 
             function switchSection(section) {
-                currentSection = section;
-                document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById(`menu-${section}`).classList.add('active');
+                try {
+                    currentSection = section;
+                    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+                    const targetMenu = document.getElementById(`menu-${section}`);
+                    if (targetMenu) targetMenu.classList.add('active');
 
-                if (section === 'report') renderReportSection();
-                if (section === 'lab') renderLabSection();
-                if (section === 'se') renderSeSection();
-                if (section === 'links') renderLinksSection();
-                window.scrollTo(0, 0);
+                    if (section === 'report') renderReportSection();
+                    if (section === 'lab') renderLabSection();
+                    if (section === 'se') renderSeSection();
+                    if (section === 'links') renderLinksSection();
+                    window.scrollTo(0, 0);
+                } catch (e) {
+                    console.error(e);
+                }
             }
 
             // ================= 1. 身分證 =================
             function renderReportSection() {
                 const content = document.getElementById('mainContent');
+                if (!content) return;
                 const isLocked = !!idCardState.lockedOncology;
 
-                // 決定要顯示的癌別名稱
                 let displayCancerName = '';
                 if (currentOncology === 'breast') displayCancerName = '乳癌';
                 else if (currentOncology === 'lung') displayCancerName = '肺癌';
                 else if (currentOncology === 'colorectal') displayCancerName = '大腸癌';
                 else displayCancerName = otherCancerName || '尚未設定 (請於上方輸入)';
+
+                const metaVal = idCardState.metaSiteRaw || '';
+                const standardMetas = ['骨骼', '腦部', '肝臟', '肺部', '腹膜', ''];
+                const isStandardMeta = standardMetas.indexOf(metaVal) !== -1;
 
                 content.innerHTML = `
                     <div class="info-panel">
@@ -1020,15 +1073,15 @@
                             <div id="meta-detail-container" class="conditional-div">
                                 <label>部位</label>
                                 <select class="form-select" id="id-meta-site" onchange="document.getElementById('meta-site-other-container').style.display = (this.value === '其他') ? 'block' : 'none';">
-                                    <option value="骨骼" ${idCardState.metaSiteRaw === '骨骼' ? 'selected' : ''}>骨骼</option>
-                                    <option value="腦部" ${idCardState.metaSiteRaw === '腦部' ? 'selected' : ''}>腦部</option>
-                                    <option value="肝臟" ${idCardState.metaSiteRaw === '肝臟' ? 'selected' : ''}>肝臟</option>
-                                    <option value="肺部" ${idCardState.metaSiteRaw === '肺部' ? 'selected' : ''}>肺部</option>
-                                    <option value="腹膜" ${idCardState.metaSiteRaw === '腹膜' ? 'selected' : ''}>腹膜</option>
-                                    <option value="其他" ${!['骨骼', '腦部', '肝臟', '肺部', '腹膜', ''].includes(idCardState.metaSiteRaw || '') ? 'selected' : ''}>其他</option>
+                                    <option value="骨骼" ${metaVal === '骨骼' ? 'selected' : ''}>骨骼</option>
+                                    <option value="腦部" ${metaVal === '腦部' ? 'selected' : ''}>腦部</option>
+                                    <option value="肝臟" ${metaVal === '肝臟' ? 'selected' : ''}>肝臟</option>
+                                    <option value="肺部" ${metaVal === '肺部' ? 'selected' : ''}>肺部</option>
+                                    <option value="腹膜" ${metaVal === '腹膜' ? 'selected' : ''}>腹膜</option>
+                                    <option value="其他" ${!isStandardMeta && metaVal ? 'selected' : ''}>其他</option>
                                 </select>
-                                <div id="meta-site-other-container" class="conditional-div" style="display:${!['骨骼', '腦部', '肝臟', '肺部', '腹膜', ''].includes(idCardState.metaSiteRaw || '') ? 'block' : 'none'}; margin-top:0.5rem;">
-                                    <input type="text" id="id-meta-site-other" class="form-input" placeholder="請輸入轉移部位..." value="${!['骨骼', '腦部', '肝臟', '肺部', '腹膜', ''].includes(idCardState.metaSiteRaw) ? (idCardState.metaSiteRaw || '') : ''}">
+                                <div id="meta-site-other-container" class="conditional-div" style="display:${!isStandardMeta && metaVal ? 'block' : 'none'}; margin-top:0.5rem;">
+                                    <input type="text" id="id-meta-site-other" class="form-input" placeholder="請輸入轉移部位..." value="${!isStandardMeta ? metaVal : ''}">
                                 </div>
                             </div>
                         </div>
@@ -1037,8 +1090,9 @@
                         ${isLocked ? `<button class="btn-delete-id" onclick="CareApp.deleteIdCard()">🗑️ 刪除身分證並重新填寫</button>` : ''}
                     </div>`;
 
-                if (idCardState.date) document.getElementById('id-date').value = idCardState.date;
-                else document.getElementById('id-date').value = getTodayString();
+                const dateEl = document.getElementById('id-date');
+                if (dateEl) dateEl.value = idCardState.date || getTodayString();
+
                 if (idCardState.type) document.getElementById('id-type').value = idCardState.type;
                 if (idCardState.stage) document.getElementById('id-stage').value = idCardState.stage;
                 if (idCardState.size) document.getElementById('id-size').value = idCardState.size;
@@ -1046,12 +1100,14 @@
                 if (idCardState.ki67) document.getElementById('id-ki67').value = idCardState.ki67;
 
                 if (idCardState.lymphRaw && idCardState.lymphRaw === '有') {
-                    document.getElementById('id-lymph').value = '有'; document.getElementById('lymph-detail-container').style.display = 'block';
+                    document.getElementById('id-lymph').value = '有';
+                    document.getElementById('lymph-detail-container').style.display = 'block';
                     document.getElementById('id-lymph-total').value = idCardState.lymphTotal || '';
                     document.getElementById('id-lymph-inf').value = idCardState.lymphInf || '';
                 }
                 if (idCardState.metaRaw && idCardState.metaRaw === '有') {
-                    document.getElementById('id-meta').value = '有'; document.getElementById('meta-detail-container').style.display = 'block';
+                    document.getElementById('id-meta').value = '有';
+                    document.getElementById('meta-detail-container').style.display = 'block';
                 }
             }
 
@@ -1095,11 +1151,11 @@
 
                 saveDataToLocal();
 
-                // 鎖定 UI
                 document.querySelectorAll('.tab-btn').forEach(btn => {
                     if (btn.id !== 'tab-' + currentOncology) btn.disabled = true;
                 });
-                if (currentOncology === 'other') document.getElementById('top-other-input').disabled = true;
+                const otherInput = document.getElementById('top-other-input');
+                if (currentOncology === 'other' && otherInput) otherInput.disabled = true;
 
                 renderReportSection();
                 updateReminder();
@@ -1120,21 +1176,27 @@
                         btn.disabled = false;
                         btn.classList.remove('active');
                     });
-                    document.getElementById('tab-breast').classList.add('active');
-                    document.getElementById('top-other-container').style.display = 'none';
-                    document.getElementById('top-other-input').disabled = false;
-                    document.getElementById('top-other-input').value = '';
+                    const tb = document.getElementById('tab-breast');
+                    if (tb) tb.classList.add('active');
+
+                    const oc = document.getElementById('top-other-container');
+                    const oi = document.getElementById('top-other-input');
+                    if (oc) oc.style.display = 'none';
+                    if (oi) { oi.disabled = false; oi.value = ''; }
 
                     renderReportSection();
                     updateReminder();
                 }
             }
 
-            // ================= 2. 抽血與體重 (補回預覽數值) =================
+            // ================= 2. 抽血與體重 =================
             function renderLabSection() {
                 const content = document.getElementById('mainContent');
-                let historyHtml = labRecords.length > 0 ? `
-                    <div class="info-panel" style="margin-bottom:1rem;">
+                if (!content) return;
+
+                let historyHtml = '';
+                if (labRecords.length > 0) {
+                    historyHtml = `<div class="info-panel" style="margin-bottom:1rem;">
                         <div class="info-title">📂 歷史抽血紀錄</div>
                         ${labRecords.map((r, i) => `
                             <div class="history-card"><button class="btn-delete" onclick="CareApp.deleteRecord('lab', ${i})">刪除</button>
@@ -1144,7 +1206,8 @@
                                 肝(GPT): ${r.gpt || '-'} | 腎(Cr): ${r.cr || '-'} | 血色素: ${r.hb || '-'}
                             </div></div>
                         `).join('')}
-                    </div>` : '';
+                    </div>`;
+                }
 
                 content.innerHTML = `
                     ${historyHtml}
@@ -1189,7 +1252,7 @@
 
             function checkWeightLoss(weightVal) {
                 if (labRecords.length === 0) return;
-                const sortedLabs = [...labRecords].filter(r => r.weight && !isNaN(parseFloat(r.weight))).sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
+                const sortedLabs = labRecords.slice().filter(r => r.weight && !isNaN(parseFloat(r.weight))).sort((a, b) => new Date(b.recordDate) - new Date(a.recordDate));
                 if (sortedLabs.length > 0) {
                     let lastWeight = parseFloat(sortedLabs[0].weight);
                     let currentWeight = parseFloat(weightVal);
@@ -1220,24 +1283,31 @@
                 if (!validateDateGuard('lab-date')) return;
 
                 const labFields = ['input-weight', 'input-wbc', 'input-anc', 'input-hb', 'input-plt', 'input-got', 'input-gpt', 'input-bun', 'input-cr', 'input-ldh', 'input-alp', 'input-cea', 'input-ca153', 'input-ca125', 'input-ca199', 'input-afp', 'input-psa', 'input-cga', 'input-bhcg'];
-                const hasValue = labFields.some(id => !checkEmpty(document.getElementById(id).value));
+                let hasValue = false;
+                labFields.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && !checkEmpty(el.value)) hasValue = true;
+                });
+
                 if (!hasValue) return alert("⚠️ 請至少填寫一項「檢驗數值」或「體重」。");
 
-                let weightVal = document.getElementById('input-weight').value;
+                let weightVal = document.getElementById('input-weight') ? document.getElementById('input-weight').value : '';
                 if (weightVal) checkWeightLoss(weightVal);
 
+                const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+
                 let newRecord = {
-                    recordDate: document.getElementById('lab-date').value || getTodayString(),
+                    recordDate: getVal('lab-date') || getTodayString(),
                     weight: weightVal,
-                    wbc: document.getElementById('input-wbc').value, hb: document.getElementById('input-hb').value,
-                    cea: document.getElementById('input-cea').value, ca153: document.getElementById('input-ca153').value,
-                    anc: document.getElementById('input-anc').value, plt: document.getElementById('input-plt').value,
-                    got: document.getElementById('input-got').value, gpt: document.getElementById('input-gpt').value,
-                    bun: document.getElementById('input-bun').value, cr: document.getElementById('input-cr').value,
-                    ldh: document.getElementById('input-ldh').value, alp: document.getElementById('input-alp').value,
-                    ca125: document.getElementById('input-ca125').value, ca199: document.getElementById('input-ca199').value,
-                    afp: document.getElementById('input-afp').value, psa: document.getElementById('input-psa').value,
-                    bhcg: document.getElementById('input-bhcg').value, cga: document.getElementById('input-cga').value
+                    wbc: getVal('input-wbc'), hb: getVal('input-hb'),
+                    cea: getVal('input-cea'), ca153: getVal('input-ca153'),
+                    anc: getVal('input-anc'), plt: getVal('input-plt'),
+                    got: getVal('input-got'), gpt: getVal('input-gpt'),
+                    bun: getVal('input-bun'), cr: getVal('input-cr'),
+                    ldh: getVal('input-ldh'), alp: getVal('input-alp'),
+                    ca125: getVal('input-ca125'), ca199: getVal('input-ca199'),
+                    afp: getVal('input-afp'), psa: getVal('input-psa'),
+                    bhcg: getVal('input-bhcg'), cga: getVal('input-cga')
                 };
 
                 checkLabAlerts(newRecord);
@@ -1251,18 +1321,22 @@
                 });
             }
 
-            // ================= 3. 副作用紀錄 (補回預覽數值) =================
+            // ================= 3. 副作用紀錄 =================
             function renderSeSection() {
                 const content = document.getElementById('mainContent');
-                let historyHtml = seRecords.length > 0 ? `
-                    <div class="info-panel" style="margin-bottom:1rem;">
+                if (!content) return;
+
+                let historyHtml = '';
+                if (seRecords.length > 0) {
+                    historyHtml = `<div class="info-panel" style="margin-bottom:1rem;">
                         <div class="info-title">📂 歷史副作用紀錄</div>
                         ${seRecords.map((r, i) => `
                             <div class="history-card"><button class="btn-delete" onclick="CareApp.deleteRecord('se', ${i})">刪除</button>
                             <span class="history-date" onclick="CareApp.showDailyReport('${r.recordDate}')">📅 ${r.recordDate}</span>
                             <div class="history-data">症狀: <b style="color:${r.sev === '嚴重 (需就醫)' ? 'red' : ''}">${r.symp}</b> (${r.sev})<br>備註: ${r.notes || '無'}</div></div>
                         `).join('')}
-                    </div>` : '';
+                    </div>`;
+                }
 
                 content.innerHTML = `
                     ${historyHtml}
@@ -1316,15 +1390,17 @@
 
             // ================= 4. 網頁資源 =================
             function renderLinksSection() {
-                document.getElementById('mainContent').innerHTML = `
+                const content = document.getElementById('mainContent');
+                if (!content) return;
+                content.innerHTML = `
                     <div class="info-panel">
                         <div class="info-title">🔗 常用網頁與健康存摺</div>
                         <p style="font-size:1.15rem; font-weight:bold; margin-bottom:0.5rem; color:#475569;">官方檢驗報告查詢：</p>
                         <a href="https://www.nhi.gov.tw/ch/cp-3166-56af4-2457-1.html" target="_blank" class="btn-link" style="background:#059669;">🏥 健保快易通 - 健康存摺</a>
                         <p style="font-size:1.15rem; font-weight:bold; margin:1.5rem 0 0.5rem 0; color:#475569;">癌症相關資源：</p>
                         <a href="https://www.hope.org.tw/" target="_blank" class="btn-link" style="background:#0284c7;">🌐 希望基金會官方網站</a>
-                        <a href="https://youtube.com/@ehopetw?si=DoNcy1fb8qFedPeA" target="_blank" class="btn-link" style="background:#ef4444;">📺 HOPE TV</a>
-                        <a href="https://youtube.com/playlist?list=PLTuzBRPLNTXyh_i2sqiBk1RfUe1s5phR2&si=EcP0Py1bJLPFMhLG" target="_blank" class="btn-link" style="background:#8b5cf6;">🎧 癌後心裡很有事 Podcast</a>
+                        <a href="https://youtube.com/@ehopetw" target="_blank" class="btn-link" style="background:#ef4444;">📺 HOPE TV</a>
+                        <a href="https://youtube.com/playlist?list=PLTuzBRPLNTXyh_i2sqiBk1RfUe1s5phR2" target="_blank" class="btn-link" style="background:#8b5cf6;">🎧 癌後心裡很有事 Podcast</a>
                         <a href="https://page.line.me/ixp1624t?openQrModal=true" target="_blank" class="btn-link" style="background:#10b981;">💬 希望基金會 LINE</a>
                     </div>`;
             }
@@ -1338,8 +1414,7 @@
                 }
             }
 
-            // ================= 彈窗與 PDF 匯出邏輯 (完整修復) =================
-
+            // ================= 彈窗與 PDF =================
             function showDailyReport(date) {
                 document.getElementById('modalDateTitle').innerText = `📅 ${date} 報告總表`;
                 const modalBody = document.getElementById('modalBody');
@@ -1381,13 +1456,13 @@
 
             function prepareAndPrint() {
                 const printArea = document.getElementById('print-area-global');
+                if (!printArea) return;
                 let html = `<div class="print-title">台東馬偕7C小幫手 - 個別化健康追蹤總表</div>`;
 
-                // 1. 身分證
                 html += `<div class="print-section"><div class="print-section-title">🪪 癌症身分證 (了解它)</div>`;
                 if (Object.keys(idCardState).length > 0) {
                     html += `<table class="print-table info-table">
-                        <tr><th>報告日期</th><td>${idCardState.date}</td><th>部位 / 期別</th><td>${idCardState.site} (${idCardState.stage})</td></tr>
+                        <tr><th>報告日期</th><td>${idCardState.date || '-'}</td><th>部位 / 期別</th><td>${idCardState.site || '-'} (${idCardState.stage || '-'})</td></tr>
                         <tr><th>細胞型態</th><td>${idCardState.type || '-'}</td><th>腫瘤大小</th><td>${idCardState.size || '-'} cm</td></tr>
                         <tr><th>細胞分化程度</th><td>${idCardState.grade || '-'}</td><th>Ki 67 指數</th><td>${idCardState.ki67 || '-'}</td></tr>
                         <tr><th>淋巴轉移</th><td>${idCardState.lymph || '-'}</td><th>遠處轉移</th><td>${idCardState.meta || '-'}</td></tr>
@@ -1395,10 +1470,9 @@
                 } else { html += `<p>尚未填寫。</p>`; }
                 html += `</div>`;
 
-                // 2. 體重監控
                 html += `<div class="print-section"><div class="print-section-title">⚖️ 體重監控</div>`;
                 if (labRecords.length > 0) {
-                    const sortedLabs = [...labRecords].filter(r => r.weight && !isNaN(parseFloat(r.weight))).sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate));
+                    const sortedLabs = labRecords.slice().filter(r => r.weight && !isNaN(parseFloat(r.weight))).sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate));
                     if (sortedLabs.length > 0) {
                         html += `<table class="print-table"><tr><th>日期</th><th>體重 (kg)</th><th>與前次變化與建議</th></tr>`;
                         let prevWeight = null, prevDate = null;
@@ -1420,10 +1494,9 @@
                 } else { html += `<p>尚未填寫。</p>`; }
                 html += `</div>`;
 
-                // 3. 抽血與癌指數 (補回肝腎功能及所有完整數值)
                 html += `<div class="print-section"><div class="print-section-title">🩸 血液檢查與腫瘤標記</div>`;
                 if (labRecords.length > 0) {
-                    const sortedLabs = [...labRecords].sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate));
+                    const sortedLabs = labRecords.slice().sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate));
                     const displayLabs = sortedLabs.slice(-4);
                     html += `<table class="print-table">
                         <tr><th colspan="2" style="background:#fff;">檢查日期</th>${displayLabs.map(r => `<th>${r.recordDate}</th>`).join('')}</tr>
@@ -1452,11 +1525,10 @@
                 } else { html += `<p>尚未填寫。</p>`; }
                 html += `</div>`;
 
-                // 4. 副作用
                 html += `<div class="print-section"><div class="print-section-title">🤢 副作用紀錄</div>`;
                 if (seRecords.length > 0) {
                     html += `<table class="print-table"><tr><th>發生日期</th><th>症狀</th><th>嚴重程度</th><th>備註說明</th></tr>`;
-                    const sortedSe = [...seRecords].sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate));
+                    const sortedSe = seRecords.slice().sort((a, b) => new Date(a.recordDate) - new Date(b.recordDate));
                     sortedSe.forEach(r => html += `<tr><td>${r.recordDate}</td><td>${r.symp}</td><td>${r.sev}</td><td>${r.notes || '-'}</td></tr>`);
                     html += `</table>`;
                 } else { html += `<p>無副作用紀錄。</p>`; }
@@ -1487,7 +1559,9 @@
 
         })();
 
-        window.onload = CareApp.init;
+        // 確保 DOM 讀取完畢後立刻執行
+        window.addEventListener('DOMContentLoaded', function () { CareApp.init(); });
+        setTimeout(function () { if (document.getElementById('pushText').innerText === '讀取中...') CareApp.init(); }, 100);
     </script>
 </body>
 
