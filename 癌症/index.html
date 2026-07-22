@@ -673,6 +673,24 @@
             }
         }
     </style>
+    <script>
+        // ================= 重點更新：自動偵測並強制跳轉至外部瀏覽器 =================
+        // 在畫面渲染前，優先檢查是否位於 LINE 或 FB 的內建瀏覽器
+        (function () {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            const isLine = ua.indexOf("Line") > -1;
+            const isFB = ua.indexOf("FBAV") > -1 || ua.indexOf("FBAN") > -1;
+            const isIG = ua.indexOf("Instagram") > -1;
+            const isWebView = isLine || isFB || isIG;
+
+            // 如果是在內建瀏覽器中，且網址尚未加上強制跳轉參數
+            if (isWebView && window.location.search.indexOf("openExternalBrowser=1") === -1) {
+                // 將網址加上 ?openExternalBrowser=1，LINE 偵測到此參數就會自動開啟預設的 Safari/Chrome
+                const separator = window.location.search ? "&" : "?";
+                window.location.href = window.location.href + separator + "openExternalBrowser=1";
+            }
+        })();
+    </script>
 </head>
 
 <body>
@@ -961,7 +979,7 @@
                 }
             }
 
-            // 初始化時將畫面拉到最上面
+            // 初始化設定
             function init() {
                 try {
                     window.scrollTo(0, 0);
@@ -990,7 +1008,6 @@
                     updateReminder();
                     updateHistoryPanel();
 
-                    // 預設啟動在 report (但保留 init 時不特別向下滑動)
                     currentSection = 'report';
                     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
                     const targetMenu = document.getElementById('menu-report');
@@ -1003,7 +1020,6 @@
                 }
             }
 
-            // 修正 1：點擊切換或自動跳轉時，將畫面定位在「第二張畫面(導覽列)」，不回最頂
             function switchSection(section) {
                 try {
                     currentSection = section;
@@ -1016,7 +1032,7 @@
                     if (section === 'se') renderSeSection();
                     if (section === 'links') renderLinksSection();
 
-                    // 將畫面優雅地定位在導覽選單處 (保留 10px 緩衝空間)
+                    // 將畫面精準定位在導覽選單列，不需要滑回最上面
                     const menuGrid = document.getElementById('main-menu-grid');
                     if (menuGrid) {
                         const y = menuGrid.getBoundingClientRect().top + window.pageYOffset - 10;
@@ -1407,16 +1423,17 @@
             function renderLinksSection() {
                 const content = document.getElementById('mainContent');
                 if (!content) return;
+                // 加入 ?openExternalBrowser=1 以防萬一也是好的體驗
                 content.innerHTML = `
                     <div class="info-panel">
                         <div class="info-title">🔗 常用網頁與健康存摺</div>
                         <p style="font-size:1.15rem; font-weight:bold; margin-bottom:0.5rem; color:#475569;">官方檢驗報告查詢：</p>
-                        <a href="https://www.nhi.gov.tw/ch/cp-3166-56af4-2457-1.html" target="_blank" class="btn-link" style="background:#059669;">🏥 健保快易通 - 健康存摺</a>
+                        <a href="https://www.nhi.gov.tw/ch/cp-3166-56af4-2457-1.html?openExternalBrowser=1" target="_blank" class="btn-link" style="background:#059669;">🏥 健保快易通 - 健康存摺</a>
                         <p style="font-size:1.15rem; font-weight:bold; margin:1.5rem 0 0.5rem 0; color:#475569;">癌症相關資源：</p>
-                        <a href="https://www.hope.org.tw/" target="_blank" class="btn-link" style="background:#0284c7;">🌐 希望基金會官方網站</a>
-                        <a href="https://youtube.com/@ehopetw" target="_blank" class="btn-link" style="background:#ef4444;">📺 HOPE TV</a>
-                        <a href="https://youtube.com/playlist?list=PLTuzBRPLNTXyh_i2sqiBk1RfUe1s5phR2" target="_blank" class="btn-link" style="background:#8b5cf6;">🎧 癌後心裡很有事 Podcast</a>
-                        <a href="https://page.line.me/ixp1624t?openQrModal=true" target="_blank" class="btn-link" style="background:#10b981;">💬 希望基金會 LINE</a>
+                        <a href="https://www.hope.org.tw/?openExternalBrowser=1" target="_blank" class="btn-link" style="background:#0284c7;">🌐 希望基金會官方網站</a>
+                        <a href="https://youtube.com/@ehopetw?openExternalBrowser=1" target="_blank" class="btn-link" style="background:#ef4444;">📺 HOPE TV</a>
+                        <a href="https://youtube.com/playlist?list=PLTuzBRPLNTXyh_i2sqiBk1RfUe1s5phR2&openExternalBrowser=1" target="_blank" class="btn-link" style="background:#8b5cf6;">🎧 癌後心裡很有事 Podcast</a>
+                        <a href="https://page.line.me/ixp1624t?openQrModal=true&openExternalBrowser=1" target="_blank" class="btn-link" style="background:#10b981;">💬 希望基金會 LINE</a>
                     </div>`;
             }
 
@@ -1469,7 +1486,7 @@
                 return val;
             }
 
-            // 修正 2：加入 try...catch 與 LINE WebView 偵測，引導使用者使用外部瀏覽器
+            // PDF 匯出功能與防呆跳出提示
             function prepareAndPrint() {
                 try {
                     const printArea = document.getElementById('print-area-global');
@@ -1565,7 +1582,6 @@
                             console.error(e);
                         }
 
-                        // 判斷是否為 LINE/Facebook 等封鎖列印的內建瀏覽器
                         const ua = navigator.userAgent || navigator.vendor || window.opera;
                         if (ua.indexOf("Line") > -1 || ua.indexOf("FBAV") > -1 || !isPrintSuccess) {
                             alert("⚠️ 【溫馨提醒】\n系統偵測到您目前可能正使用 LINE 等內建瀏覽器，這類瀏覽器不支援直接匯出 PDF。\n\n👉 解決方法：\n請點擊畫面右上角或右下角的「 ⋮ 」或「分享」圖示，選擇「以預設瀏覽器開啟」或「在 Safari / Chrome 中開啟」，開啟後再點擊此按鈕即可順利匯出喔！");
